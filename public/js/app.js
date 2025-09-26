@@ -1,14 +1,53 @@
 (() => {
   const $ = (sel, root=document) => root.querySelector(sel);
-
   const rnd = (a,b)=> a + Math.random()*(b-a);
   const buzz = ms => 'vibrate' in navigator && navigator.vibrate(ms);
 
   const hint = $('#hint');
+  const pre = $('#preloader');
+  const ui = $('#ui');
+
   const showHint = (text) => { if(hint){ hint.textContent = text; hint.classList.remove('hidden'); } };
   const hideHint = () => hint && hint.classList.add('hidden');
 
-  // Кто сейчас «в кадре»
+  // Блокировка снимка до готовности AR
+  const snapBtn = document.getElementById('btn-snap');
+  const enableSnap = () => { if (snapBtn) snapBtn.disabled = false; };
+
+  // iOS-гейт (некоторым Safari нужно тапнуть перед началом)
+  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+  const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+  const gate = $('#ios-gate');
+  if (isIOS && isSafari && gate) gate.classList.remove('hidden');
+  $('#ios-allow')?.addEventListener('click', ()=> gate.classList.add('hidden'));
+
+  // Повернуть устройство
+  const rotate = $('#rotate');
+  const onResize = () => {
+    if (!rotate) return;
+    const portrait = window.matchMedia('(orientation: portrait)').matches;
+    rotate.classList.toggle('hidden', portrait);
+  };
+  window.addEventListener('resize', onResize); onResize();
+
+  // Подсказка по query
+  const s = new URLSearchParams(location.search).get('s');
+  if (s === 'cheb') showHint('Подойдите к скульптуре Чебурашки и наведите камеру');
+  if (s === 'shapo') showHint('Наведите на Шапокляк/Гену — появится Лариска');
+  if (s === 'volk') showHint('Найдите Волка на скамейке — рядом появится Заяц');
+
+  // Сцена и события MindAR
+  const scene = document.querySelector('a-scene');
+  if (scene) {
+    scene.addEventListener('loaded', () => pre && pre.classList.add('hidden'));
+    scene.addEventListener('arReady', () => { pre && pre.classList.add('hidden'); enableSnap(); });
+    scene.addEventListener('arError', () => {
+      pre && pre.classList.add('hidden');
+      showHint('Не удалось запустить AR: откройте сайт по HTTPS и разрешите камеру.');
+    });
+  }
+
+  // Следим за активными целями
   const active = new Set();
   const bindTarget = (el, {onFound, onLost, name, tip}) => {
     if(!el) return;
@@ -25,10 +64,9 @@
     });
   };
 
-  // ===== ЧЕБУРАШКА — апельсиновый дождь =====
+  // Чебурашка — дождь апельсинов (примитивы)
   const orangeContainer = $('#orange-rain');
-  let rainTimer = null;
-  let orangeCount = 0;
+  let rainTimer = null, orangeCount = 0;
   const ORANGE_CAP = 40;
 
   function spawnOrange(){
@@ -36,7 +74,6 @@
     if (orangeCount >= ORANGE_CAP) return;
 
     const o = document.createElement('a-sphere');
-    o.classList.add('orange');
     o.setAttribute('radius', rnd(0.04, 0.08));
     o.setAttribute('material', 'color: orange; metalness:0.05; roughness:0.9');
 
@@ -59,22 +96,15 @@
 
   bindTarget($('#tgt-cheb'), {
     name: 'Чебурашка', tip: 'Чебурашка — ловите апельсинки! 🍊',
-    onFound() {
-      if (!rainTimer) rainTimer = setInterval(spawnOrange, 260);
-    },
-    onLost() {
-      if (rainTimer) { clearInterval(rainTimer); rainTimer = null; }
-      orangeCount = 0;
-      if (orangeContainer) orangeContainer.innerHTML = '';
-    }
+    onFound() { if (!rainTimer) rainTimer = setInterval(spawnOrange, 260); },
+    onLost()  { if (rainTimer) { clearInterval(rainTimer); rainTimer = null; } orangeCount = 0; orangeContainer && (orangeContainer.innerHTML = ''); }
   });
 
-  // ===== ШАПОКЛЯК — Лариска машет =====
+  // Шапокляк — «Лариска машет» (заглушка: конус)
   const lariska = $('#lariska-model');
   if (lariska) {
     lariska.addEventListener('click', () => {
       lariska.setAttribute('animation__wave','property: rotation; to: 0 45 0; dir: alternate; dur: 350; loop: 4; easing: easeInOutSine');
-      buzz(8);
       setTimeout(() => lariska.removeAttribute('animation__wave'), 1600);
     });
   }
@@ -83,23 +113,21 @@
     onFound(){}, onLost(){}
   });
 
-  // ===== ВОЛК — заяц дразнит, мопед по тапу =====
+  // Волк — заяц подпрыгивает, мопед по тапу (заглушки: box + torus-knot)
   const moped = $('#moped-model');
-  const hare = $('#hare-model');
+  const hare  = $('#hare-model');
   if (hare) {
     hare.addEventListener('click', () => {
-      hare.setAttribute('animation__hop','property: position; to: 0.35 0.12 0.05; dir: alternate; dur: 250; loop: 2; easing:easeOutQuad');
+      hare.setAttribute('animation__hop','property: position; to: 0.35 0.16 0.05; dir: alternate; dur: 250; loop: 2; easing:easeOutQuad');
       setTimeout(() => hare.removeAttribute('animation__hop'), 700);
     });
   }
-
   const sceneEl = document.querySelector('a-scene');
-  const uiEl = $('#ui');
   if (sceneEl) {
     sceneEl.addEventListener('click', (e) => {
-      if (uiEl && uiEl.contains(e.target)) return;       // игнор кликов по UI
+      if (ui && ui.contains(e.target)) return;      // игнор кликов по UI
       if (!moped) return;
-      if (!active.has('tgt-volk')) return;               // только когда Волк трекится
+      if (!active.has('tgt-volk')) return;          // только когда видим Волка
       const vis = moped.getAttribute('visible');
       moped.setAttribute('visible', !(vis === true || vis === 'true'));
     });
@@ -109,53 +137,6 @@
     onFound(){}, onLost(){ moped && moped.setAttribute('visible', false); }
   });
 
-  // ===== Селфи-режим =====
-  const selfieBtn = document.getElementById('btn-selfie');
-  if (selfieBtn) selfieBtn.onclick = () => location.href = 'face.html';
-
-  // ===== Ориентация =====
-  const rotate = $('#rotate');
-  const onResize = () => {
-    if (!rotate) return;
-    const portrait = window.matchMedia('(orientation: portrait)').matches;
-    rotate.classList.toggle('hidden', portrait);
-  };
-  window.addEventListener('resize', onResize);
-  onResize();
-
-  // ===== iOS аудио/камера-гейт =====
-  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-  const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
-  const gate = $('#ios-gate');
-  const allowBtn = $('#ios-allow');
-  if (isIOS && isSafari && gate && allowBtn) {
-    gate.classList.remove('hidden');
-    allowBtn.addEventListener('click', () => {
-      gate.classList.add('hidden');
-      const s = document.getElementById('sfx-pop');
-      s && s.play && s.play().catch(()=>{});
-    });
-  }
-
-  // ===== Подсказка по ?s=... =====
-  const s = new URLSearchParams(location.search).get('s');
-  if (s === 'cheb') showHint('Подойдите к скульптуре Чебурашки и наведите камеру');
-  if (s === 'shapo') showHint('Наведите на Шапокляк/Гену — появится Лариска');
-  if (s === 'volk') showHint('Найдите Волка на скамейке — рядом появится Заяц');
-
-  // ===== Прелоадер + события MindAR =====
-  const pre = document.getElementById('preloader');
-  const scene = document.querySelector('a-scene');
-  if (scene) {
-    scene.addEventListener('loaded', () => pre && pre.classList.add('hidden'));
-    scene.addEventListener('arReady', () => pre && pre.classList.add('hidden'));
-    scene.addEventListener('arError', () => {
-      showHint('Не удалось запустить AR: проверьте разрешение камеры или смените браузер.');
-    });
-  }
-
-  // ===== Service Worker для кэша ассетов (опционально) =====
-  if ('serviceWorker' in navigator) {
-    navigator.serviceWorker.register('./sw.js').catch(()=>{});
-  }
+  // Селфи
+  document.getElementById('btn-selfie')?.addEventListener('click', ()=> location.href = 'face.html');
 })();
