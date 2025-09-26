@@ -14,13 +14,6 @@
   const snapBtn = document.getElementById('btn-snap');
   const enableSnap = () => { if (snapBtn) snapBtn.disabled = false; };
 
-  // iOS-гейт (некоторым Safari нужно тапнуть перед началом)
-  const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
-  const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
-  const gate = $('#ios-gate');
-  if (isIOS && isSafari && gate) gate.classList.remove('hidden');
-  $('#ios-allow')?.addEventListener('click', ()=> gate.classList.add('hidden'));
-
   // Повернуть устройство
   const rotate = $('#rotate');
   const onResize = () => {
@@ -30,24 +23,57 @@
   };
   window.addEventListener('resize', onResize); onResize();
 
-  // Подсказка по query
+  // Подсказка по ?s=...
   const s = new URLSearchParams(location.search).get('s');
   if (s === 'cheb') showHint('Подойдите к скульптуре Чебурашки и наведите камеру');
   if (s === 'shapo') showHint('Наведите на Шапокляк/Гену — появится Лариска');
   if (s === 'volk') showHint('Найдите Волка на скамейке — рядом появится Заяц');
 
-  // Сцена и события MindAR
+  // СЦЕНА
   const scene = document.querySelector('a-scene');
-  if (scene) {
-    scene.addEventListener('loaded', () => pre && pre.classList.add('hidden'));
-    scene.addEventListener('arReady', () => { pre && pre.classList.add('hidden'); enableSnap(); });
-    scene.addEventListener('arError', () => {
-      pre && pre.classList.add('hidden');
-      showHint('Не удалось запустить AR: откройте сайт по HTTPS и разрешите камеру.');
-    });
+
+  // ЕДИНЫЙ старт — по клику на кнопку или по первому тапу (если кнопку скрыли)
+  const gate = $('#start-gate');
+  const startBtn = $('#start-ar');
+
+  async function startAR() {
+    try {
+      if (pre) pre.classList.remove('hidden'); // на всякий
+      await new Promise(res => {
+        if (scene.hasLoaded) res(); else scene.addEventListener('loaded', res, {once:true});
+      });
+      const arSystem = scene.systems['mindar-image-system'];
+      console.log('[AR] starting…', arSystem);
+      await arSystem.start(); // ВАЖНО: ручной старт вместо autoStart
+      console.log('[AR] started');
+      gate?.classList.add('hidden');
+    } catch (e) {
+      console.error('[AR] start error', e);
+      showHint('Не удалось запустить AR: проверьте HTTPS, разрешение камеры и доступность targets.mind.');
+      gate?.classList.remove('hidden');
+    }
   }
 
-  // Следим за активными целями
+  // Кнопка запуска
+  startBtn?.addEventListener('click', () => startAR());
+
+  // Дополнительно: первый тап по сцене тоже стартует (на случай если оверлей скрыли стилями)
+  scene?.addEventListener('click', async () => {
+    if (!gate || gate.classList.contains('hidden')) return;
+    await startAR();
+  }, { once: true });
+
+  // События MindAR
+  scene?.addEventListener('loaded', () => pre && pre.classList.add('hidden'));
+  scene?.addEventListener('arReady', () => { pre && pre.classList.add('hidden'); enableSnap(); });
+  scene?.addEventListener('arError', (e) => {
+    pre && pre.classList.add('hidden');
+    console.error('[AR] arError', e);
+    showHint('Ошибка AR: откройте сайт по HTTPS и дайте доступ к камере. Проверьте targets.mind.');
+    gate?.classList.remove('hidden');
+  });
+
+  // Трекинг активных целей
   const active = new Set();
   const bindTarget = (el, {onFound, onLost, name, tip}) => {
     if(!el) return;
@@ -64,7 +90,7 @@
     });
   };
 
-  // Чебурашка — дождь апельсинов (примитивы)
+  // ЧЕБУРАШКА — дождь апельсинов (примитивы)
   const orangeContainer = $('#orange-rain');
   let rainTimer = null, orangeCount = 0;
   const ORANGE_CAP = 40;
@@ -95,48 +121,4 @@
   }
 
   bindTarget($('#tgt-cheb'), {
-    name: 'Чебурашка', tip: 'Чебурашка — ловите апельсинки! 🍊',
-    onFound() { if (!rainTimer) rainTimer = setInterval(spawnOrange, 260); },
-    onLost()  { if (rainTimer) { clearInterval(rainTimer); rainTimer = null; } orangeCount = 0; orangeContainer && (orangeContainer.innerHTML = ''); }
-  });
-
-  // Шапокляк — «Лариска машет» (заглушка: конус)
-  const lariska = $('#lariska-model');
-  if (lariska) {
-    lariska.addEventListener('click', () => {
-      lariska.setAttribute('animation__wave','property: rotation; to: 0 45 0; dir: alternate; dur: 350; loop: 4; easing: easeInOutSine');
-      setTimeout(() => lariska.removeAttribute('animation__wave'), 1600);
-    });
-  }
-  bindTarget($('#tgt-shapo'), {
-    name:'Шапокляк', tip:'Лариска рядом — нажми, чтобы помахала 🐭',
-    onFound(){}, onLost(){}
-  });
-
-  // Волк — заяц подпрыгивает, мопед по тапу (заглушки: box + torus-knot)
-  const moped = $('#moped-model');
-  const hare  = $('#hare-model');
-  if (hare) {
-    hare.addEventListener('click', () => {
-      hare.setAttribute('animation__hop','property: position; to: 0.35 0.16 0.05; dir: alternate; dur: 250; loop: 2; easing:easeOutQuad');
-      setTimeout(() => hare.removeAttribute('animation__hop'), 700);
-    });
-  }
-  const sceneEl = document.querySelector('a-scene');
-  if (sceneEl) {
-    sceneEl.addEventListener('click', (e) => {
-      if (ui && ui.contains(e.target)) return;      // игнор кликов по UI
-      if (!moped) return;
-      if (!active.has('tgt-volk')) return;          // только когда видим Волка
-      const vis = moped.getAttribute('visible');
-      moped.setAttribute('visible', !(vis === true || vis === 'true'));
-    });
-  }
-  bindTarget($('#tgt-volk'), {
-    name:'Волк', tip:'Заяц здесь! Ткни — а он подпрыгнет 🐇',
-    onFound(){}, onLost(){ moped && moped.setAttribute('visible', false); }
-  });
-
-  // Селфи
-  document.getElementById('btn-selfie')?.addEventListener('click', ()=> location.href = 'face.html');
-})();
+    name: 'Чебура
