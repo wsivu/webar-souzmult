@@ -1,4 +1,3 @@
-// Снимок кадра (включается после arReady/loaded)
 (() => {
   const btn = document.getElementById('btn-snap');
   if (!btn) return;
