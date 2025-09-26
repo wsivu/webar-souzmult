@@ -1,0 +1,38 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>MindAR — Локальный компилятор таргетов</title>
+<style>body{font-family:system-ui,-apple-system,Arial;max-width:800px;margin:40px auto;padding:0 16px}fieldset{border:1px solid #ddd;border-radius:12px;padding:16px}button{padding:10px 14px;border-radius:10px;border:1px solid #ccc;background:#111;color:#fff;font-weight:700}progress{width:100%}</style>
+<script src="https://unpkg.com/mind-ar/dist/mindar-image.prod.js"></script>
+</head>
+<body>
+<h1>MindAR — локальный компилятор .mind</h1>
+<p>Выберите одно или несколько изображений — на выходе получите файл <code>targets.mind</code>.</p>
+<fieldset>
+<input id="files" type="file" accept="image/*" multiple />
+<div style="margin:10px 0"><progress id="prog" value="0" max="1"></progress></div>
+<button id="start">Скомпилировать</button>
+</fieldset>
+<script>
+async function loadImage(file){
+return new Promise((res,rej)=>{const img=new Image(); img.onload=()=>res(img); img.onerror=rej; img.src=URL.createObjectURL(file);});
+}
+document.getElementById('start').onclick = async () => {
+const files = Array.from(document.getElementById('files').files||[]);
+if(!files.length) return alert('Выберите изображения');
+const images = await Promise.all(files.map(loadImage));
+const compiler = new window.MINDAR.Compiler();
+const prog = document.getElementById('prog');
+await compiler.compileImageTargets(images, p=>{prog.value=p;});
+const buffer = await compiler.exportData();
+const blob = new Blob([buffer], {type:'application/octet-stream'});
+const a = document.createElement('a');
+a.href = URL.createObjectURL(blob);
+a.download = 'targets.mind';
+a.click();
+};
+</script>
+</body>
+</html>

@@ -1,0 +1,173 @@
+<!doctype html>
+<html lang="ru">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
+<title>Союзмультпарк — Волшебный AR‑объектив</title>
+<link rel="stylesheet" href="./styles.css" />
+<!-- A‑Frame & MindAR -->
+<script src="https://unpkg.com/aframe@1.6.0/dist/aframe.min.js"></script>
+<script src="https://unpkg.com/mind-ar/dist/mindar-image-aframe.prod.js"></script>
+</head>
+<body>
+    <!-- Оверлей подсказок -->
+<div id="hint" class="overlay hidden"></div>
+<!-- Кнопки UI -->
+<div id="ui" class="ui">
+<button id="btn-help" aria-label="Помощь">?</button>
+<button id="btn-snap" aria-label="Снимок">📸 Снимок</button>
+<button id="btn-selfie" aria-label="Селфи-режим">🤳 Селфи</button>
+<button id="btn-ticket" aria-label="Купить билеты" onclick="location.href='ticket.html'">🎟️ Билеты</button>
+</div>
+<!-- Оверлей «Поверните телефон» -->
+<div id="rotate" class="rotate hidden">Поверните телефон в вертикальный режим</div>
+<!-- Оверлей разрешений на iOS (звук/камера) -->
+<div id="ios-gate" class="gate hidden">
+<p>Нажмите, чтобы включить камеру и звук</p>
+<button id="ios-allow">Включить</button>
+</div>
+<!-- <div id="preloader" class="preloader">Загружаем AR…</div> -->
+<a-scene
+renderer="alpha:true; colorManagement:true; physicallyCorrectLights:true; antialias:true"
+embedded
+vr-mode-ui="enabled:false"
+device-orientation-permission-ui="enabled:true"
+mindar-image="imageTargetSrc: ./targets/cheb.mind, ./targets/shapo.mind, ./targets/volk.mind; filterMinCF:0.0002; filterBeta:0.001; warmupTolerance:5"
+loading-screen="enabled:false"
+>
+<a-assets timeout="20000">
+<!-- Модели -->
+<a-asset-item id="mdl-oranges" src="./models/oranges.glb"></a-asset-item>
+<a-asset-item id="mdl-lariska" src="./models/lariska.glb"></a-asset-item>
+<a-asset-item id="mdl-hare" src="./models/hare.glb"></a-asset-item>
+<a-asset-item id="mdl-moped" src="./models/moped.glb"></a-asset-item>
+</a-assets>
+
+
+<!-- Свет → простой и быстрый -->
+<a-entity light="type: ambient; intensity: 0.9"></a-entity>
+<a-entity light="type: directional; intensity: 0.8" position="0 1 0"></a-entity>
+
+
+<!-- ЧЕБУРАШКА: дождь из апельсинов + лёгкие всплески при попадании -->
+<a-entity id="tgt-cheb" mindar-image-target="targetIndex: 0">
+<a-entity id="orange-root" position="0 0 0"></a-entity>
+<a-entity id="orange-rain" position="0 1 0"></a-entity>
+</a-entity>
+
+
+<!-- ШАПОКЛЯК/ГЕНА: Лариска садится на плечо (статично, у скульптуры — рядом) -->
+<a-entity id="tgt-shapo" mindar-image-target="targetIndex: 1">
+<a-gltf-model id="lariska-model" src="#mdl-lariska" position="0.1 0.6 0.05" rotation="0 15 0" scale="0.35 0.35 0.35" animation-mixer></a-gltf-model>
+</a-entity>
+
+
+<!-- ВОЛК НА СКАМЕЙКЕ: заяц и (по нажатию) мопед -->
+<a-entity id="tgt-volk" mindar-image-target="targetIndex: 2">
+<a-gltf-model id="hare-model" src="#mdl-hare" position="0.35 0 0.05" rotation="0 -20 0" scale="0.6 0.6 0.6" animation-mixer></a-gltf-model>
+<a-gltf-model id="moped-model" src="#mdl-moped" position="-0.4 0 0" rotation="0 20 0" scale="0.45 0.45 0.45" visible="false"></a-gltf-model>
+</a-entity>
+
+
+<a-camera position="0 0 0"></a-camera>
+</a-scene>
+<script src="./js/capture.js"></script>
+<script src="./js/ui.js"></script>
+<script>
+const $ = sel => document.querySelector(sel);
+const rnd=(a,b)=>a+Math.random()*(b-a);
+
+
+// Подсказки по цели
+const hint = $('#hint');
+const showHint = (text)=>{ hint.textContent=text; hint.classList.remove('hidden'); };
+const hideHint = ()=> hint.classList.add('hidden');
+
+
+// СОБЫТИЯ MindAR: targetFound/targetLost
+const bindTarget = (el, {onFound, onLost, name, tip}) => {
+el.addEventListener('targetFound', () => { showHint(tip||name); onFound&&onFound(); });
+el.addEventListener('targetLost', () => { hideHint(); onLost&&onLost(); });
+};
+
+
+// ЧЕБУРАШКА → апельсиновый дождь
+const orangeContainer = $('#orange-rain');
+let rainTimer=null;
+function spawnOrange(){
+const o=document.createElement('a-sphere');
+o.setAttribute('radius', rnd(0.04,0.08));
+o.setAttribute('position', `${rnd(-0.5,0.5)} ${rnd(0.8,1.4)} ${rnd(-0.4,0.4)}`);
+o.setAttribute('material','color: orange; metalness:0.05; roughness:0.9');
+const dur= rnd(1600,2600);
+o.setAttribute('animation__fall', `property: position; to: ${o.getAttribute('position').split(' ')[0]} -0.5 0; dur: ${dur}; easing: linear; loop: false`);
+o.addEventListener('animationcomplete__fall', ()=> o.remove());
+orangeContainer.appendChild(o);
+}
+bindTarget($('#tgt-cheb'),{
+name:'Чебурашка', tip:'Чебурашка — ловите апельсинки! 🍊',
+onFound(){ rainTimer=setInterval(spawnOrange, 280); },
+onLost(){ clearInterval(rainTimer); rainTimer=null; orangeContainer.innerHTML=''; }
+});
+
+
+// ШАПОКЛЯК → Лариска покачивает головой при тапе
+const lariska = $('#lariska-model');
+lariska.addEventListener('click', ()=>{
+lariska.setAttribute('animation__wave','property: rotation; to: 0 45 0; dir: alternate; dur: 350; loop: 4; easing: easeInOutSine');
+setTimeout(()=> lariska.removeAttribute('animation__wave'), 1500);
+});
+bindTarget($('#tgt-shapo'),{
+name:'Шапокляк', tip:'Лариска рядом — нажми, чтобы помахала 🐭',
+onFound(){ /* можно стартовать idle‑анимацию */ },
+onLost(){ }
+});
+
+
+// ВОЛК → по тапу включаем/выключаем мопед, заяц слегка подпрыгивает
+const moped=$('#moped-model');
+const hare=$('#hare-model');
+hare.addEventListener('click',()=>{
+hare.setAttribute('animation__hop','property: position; to: 0.35 0.12 0.05; dir: alternate; dur: 250; loop: 2; easing:easeOutQuad');
+setTimeout(()=>hare.removeAttribute('animation__hop'), 600);
+});
+document.body.addEventListener('click', (e)=>{
+// Тоггл мопеда кнопкой «?» не трогаем; все клики в сцене — включают мопед, если таргет активен
+if (document.activeElement && document.activeElement.closest('#ui')) return;
+if (!moped) return;
+moped.setAttribute('visible', !JSON.parse(moped.getAttribute('visible')));
+});
+bindTarget($('#tgt-volk'),{
+name:'Волк', tip:'Заяц здесь! Ткни — а он подпрыгнет 🐇',
+onFound(){ }, onLost(){ moped.setAttribute('visible', false); }
+});
+
+
+// Селфи‑режим → отдельная страница (face tracking)
+document.getElementById('btn-selfie').onclick = ()=> location.href='face.html';
+
+
+// Ротация/ориентация
+const rotate = $('#rotate');
+const onResize=()=>{ const p=window.matchMedia('(orientation: portrait)').matches; rotate.classList.toggle('hidden', p); };
+addEventListener('resize', onResize); onResize();
+
+
+// iOS аудио‑гейт (показывается только в Safari iOS)
+const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
+const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
+const gate = $('#ios-gate');
+if (isIOS && isSafari) gate.classList.remove('hidden');
+$('#ios-allow').onclick = ()=>{ gate.classList.add('hidden'); document.getElementById('sfx-pop')?.play?.(); };
+
+
+// Подсказка по query (?s=cheb|shapo|volk)
+const s = new URLSearchParams(location.search).get('s');
+if (s==='cheb') showHint('Подойдите к скульптуре Чебурашки и наведите камеру');
+if (s==='shapo') showHint('Наведите на Шапокляк/Гену — появится Лариска');
+if (s==='volk') showHint('Найдите Волка на скамейке — рядом появится Заяц');
+
+
+</script>
+</body>
+</html>
