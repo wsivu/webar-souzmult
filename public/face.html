@@ -1,22 +1,22 @@
 <!doctype html>
 <html lang="ru">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1" />
-<title>Селфи‑режим — Лариска</title>
-<script src="https://unpkg.com/aframe@1.6.0/dist/aframe.min.js"></script>
-<script src="https://unpkg.com/mind-ar/dist/mindar-face-aframe.prod.js"></script>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Селфи — AR</title>
+  <script src="https://unpkg.com/aframe@1.6.0/dist/aframe.min.js"></script>
+  <script src="https://unpkg.com/mind-ar/dist/mindar-face-aframe.prod.js"></script>
+  <style>html,body{margin:0;padding:0;height:100%;overflow:hidden;background:#000;font-family:system-ui,-apple-system,Arial}</style>
 </head>
 <body>
-<a-scene mindar-face vr-mode-ui="enabled:false" renderer="colorManagement:true; physicallyCorrectLights:true; antialias:true">
-<a-assets>
-<a-asset-item id="mdl-lariska" src="./models/lariska.glb"></a-asset-item>
-</a-assets>
-<a-entity mindar-face-target>
-<!-- Привязка модели к позиции уха/плеча (индекс лэндмарки можно уточнить) -->
-<a-gltf-model src="#mdl-lariska" mindar-face-attach="anchorIndex: 234" scale="0.35 0.35 0.35" position="0.1 -0.1 -0.1"></a-gltf-model>
-</a-entity>
-<a-camera active="true"></a-camera>
-</a-scene>
+  <a-scene mindar-face vr-mode-ui="enabled:false" renderer="colorManagement:true; physicallyCorrectLights:true; antialias:true">
+    <!-- Заглушка: «Лариска» — маленькая пирамидка у уха -->
+    <a-entity mindar-face-target>
+      <a-entity mindar-face-attach="anchorIndex: 234" position="0.1 -0.1 -0.1">
+        <a-cone radius-bottom="0.06" height="0.12" color="#9c88ff"></a-cone>
+      </a-entity>
+    </a-entity>
+    <a-camera active="true"></a-camera>
+  </a-scene>
 </body>
 </html>
