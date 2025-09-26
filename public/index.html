@@ -27,18 +27,20 @@
 
   <!-- Оверлеи -->
   <div id="rotate" class="rotate hidden">Поверните телефон в вертикальный режим</div>
-  <div id="ios-gate" class="gate hidden">
-    <p>Нажмите, чтобы включить камеру</p>
-    <button id="ios-allow">Включить</button>
+
+  <!-- ЕДИНЫЙ старт-оверлей для всех браузеров -->
+  <div id="start-gate" class="gate">
+    <p>Нажмите, чтобы запустить AR и включить камеру</p>
+    <button id="start-ar">Запустить AR</button>
   </div>
 
-  <!-- Сцена MindAR: используем ОДИН targets.mind -->
+  <!-- Сцена MindAR: ОДИН targets.mind + ручной старт -->
   <a-scene
     renderer="alpha:true; colorManagement:true; physicallyCorrectLights:true; antialias:true"
     embedded
     vr-mode-ui="enabled:false"
     device-orientation-permission-ui="enabled:true"
-    mindar-image="imageTargetSrc: ./targets/targets.mind; filterMinCF:0.0002; filterBeta:0.001; warmupTolerance:5"
+    mindar-image="imageTargetSrc: ./targets/targets.mind; autoStart: false; filterMinCF:0.0002; filterBeta:0.001; warmupTolerance:5"
     loading-screen="enabled:false"
   >
     <!-- Лёгкий свет -->
