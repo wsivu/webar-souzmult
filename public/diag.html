@@ -1,0 +1,17 @@
+<!doctype html><meta charset="utf-8"><title>diag</title>
+<body style="margin:0;background:#000;color:#fff;font-family:system-ui">
+<h1>getUserMedia test</h1>
+<video id="v" autoplay playsinline style="width:100%;max-width:420px;"></video>
+<pre id="log"></pre>
+<script>
+(async () => {
+  const log = (...a)=>{document.getElementById('log').textContent += a.join(' ') + '\n'; console.log(...a);};
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'}});
+    document.getElementById('v').srcObject = stream;
+    log('OK: got camera stream');
+  } catch(e) {
+    log('ERR:', e.name, e.message);
+  }
+})();
+</script>
