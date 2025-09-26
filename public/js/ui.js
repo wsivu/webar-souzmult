@@ -1,4 +1,3 @@
-// Кнопка «?» — подсказка
 (() => {
   const help = document.getElementById('btn-help');
   if (!help) return;
