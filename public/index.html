@@ -28,12 +28,11 @@
 </div>
 <!-- <div id="preloader" class="preloader">Загружаем AR…</div> -->
 <a-scene
-renderer="alpha:true; colorManagement:true; physicallyCorrectLights:true; antialias:true"
-embedded
-vr-mode-ui="enabled:false"
-device-orientation-permission-ui="enabled:true"
-mindar-image="imageTargetSrc: ./targets/cheb.mind, ./targets/shapo.mind, ./targets/volk.mind; filterMinCF:0.0002; filterBeta:0.001; warmupTolerance:5"
-loading-screen="enabled:false"
+  mindar-image="imageTargetSrc: ./targets/targets.mind; filterMinCF:0.0002; filterBeta:0.001; warmupTolerance:5"
+  embedded
+  vr-mode-ui="enabled:false"
+  device-orientation-permission-ui="enabled:true"
+  renderer="alpha:true; colorManagement:true; physicallyCorrectLights:true; antialias:true"
 >
 <a-assets timeout="20000">
 <!-- Модели -->
@@ -170,4 +169,5 @@ if (s==='volk') showHint('Найдите Волка на скамейке — р
 
 </script>
 </body>
+
 </html>
