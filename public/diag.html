@@ -1,16 +1,25 @@
-<!doctype html><meta charset="utf-8"><title>diag</title>
-<body style="margin:0;background:#000;color:#fff;font-family:system-ui"><h1>getUserMedia test</h1>
-<video id="v" autoplay playsinline style="width:100%;max-width:420px"></video>
-<pre id="log"></pre>
+<!doctype html><meta charset="utf-8"><title>diag camera</title>
+<body style="margin:0;background:#000;color:#fff;font-family:system-ui,-apple-system,Arial">
+<h1 style="font-size:18px;padding:12px">Проверка камеры (getUserMedia)</h1>
+<video id="v" autoplay playsinline style="width:100%;max-width:480px;display:block;margin:0 12px;"></video>
+<pre id="log" style="padding:12px;white-space:pre-wrap"></pre>
 <script>
 (async () => {
-const log = (...a)=>{document.getElementById('log').textContent += a.join(' ') + '\n'; console.log(...a);};
-try {
-const stream = await navigator.mediaDevices.getUserMedia({video:{facingMode:'environment'}});
-document.getElementById('v').srcObject = stream;
-log('OK: got camera stream');
-} catch(e) {
-log('ERR:', e.name, e.message);
-}
+  const log = (...a)=>{document.getElementById('log').textContent += a.join(' ') + '\n'; console.log(...a);};
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({video:{facingMode:{ideal:'environment'}}});
+    document.getElementById('v').srcObject = stream;
+    log('OK: задняя камера стартовала');
+  } catch(e1) {
+    log('ENV fail:', e1.name, e1.message);
+    try {
+      const stream2 = await navigator.mediaDevices.getUserMedia({video:{facingMode:'user'}});
+      document.getElementById('v').srcObject = stream2;
+      log('OK: фронтальная камера стартовала');
+    } catch(e2) {
+      log('USER fail:', e2.name, e2.message);
+      log('Итог: ни одна камера не стартовала. Закройте другие приложения с камерой, дайте разрешение сайту, перезагрузите устройство.');
+    }
+  }
 })();
 </script>
