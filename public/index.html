@@ -8,7 +8,9 @@
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 64 64%22><text y=%2250%25%22 x=%2250%25%22 dominant-baseline=%22middle%22 text-anchor=%22middle%22 font-size=%2248%22>🎟️</text></svg>">
 
   <style>
-    html,body{margin:0;padding:0;height:100%;overflow:hidden;background:#000;font-family:system-ui,-apple-system,Arial}
+    html,body{margin:0;padding:0;height:100%;overflow:hidden;background:transparent; /* было #000 */}
+    a-scene, a-scene canvas { position:fixed; inset:0; }
+    a-scene canvas { z-index:1; background:transparent !important; }
     .ui{position:fixed;left:0;right:0;bottom:16px;display:flex;gap:10px;justify-content:center;z-index:10}
     .ui button{padding:10px 14px;border:none;border-radius:12px;background:rgba(0,0,0,.6);color:#fff;font-weight:600;backdrop-filter:blur(6px)}
     .overlay{position:fixed;top:12px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.55);color:#fff;padding:10px 14px;border-radius:12px;z-index:10;font-weight:700}
@@ -102,14 +104,26 @@
 
       scene.addEventListener('loaded', () => console.log('[A-Frame] loaded'));
       scene.addEventListener('arReady', () => {
-        // жёстко удаляем все лоадеры/оверлеи
-        pre?.classList.add('hidden'); pre?.remove();
+        const mis = getMIS?.() || scene.systems['mindar-image-system'];
+        const v = mis?.video || mis?._video;
+        if (v) {
+          v.setAttribute('playsinline','');  // iOS
+          v.style.position = 'fixed';
+          v.style.inset = '0';
+          v.style.objectFit = 'cover';
+          v.style.zIndex = '0';              // под канвасом (который z=1), но НЕ отрицательно
+          v.style.display = 'block';
+          try { v.play?.(); } catch {}
+        }
+        document.body.style.background = 'transparent';
         document.querySelector('.mindar-ui-overlay')?.remove();
         document.querySelector('.mindar-ui-loading')?.remove();
         document.querySelector('.mindar-ui-scanning')?.remove();
-        enableSnap();
-        console.log('[MindAR] arReady');
+        document.getElementById('pre')?.classList.add('hidden');
+        document.getElementById('btn-snap')?.removeAttribute('disabled');
+        console.log('[MindAR] arReady (video layered)');
       });
+
       scene.addEventListener('arError', (e) => {
         pre.classList.add('hidden');
         console.error('[MindAR] arError', e?.detail || e);
@@ -207,3 +221,4 @@
   </script>
 </body>
 </html>
+
