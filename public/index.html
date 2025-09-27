@@ -8,30 +8,28 @@
   <!-- Иконка -->
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 64 64%22><text y=%2250%25%22 x=%2250%25%22 dominant-baseline=%22middle%22 text-anchor=%22middle%22 font-size=%2248%22>🎟️</text></svg>">
 
-  <!-- Базовые стили -->
+  <!-- Стили (инлайн оставлю минимальные, можно вернуть styles.css если хочешь) -->
   <style>
     html, body { margin:0; padding:0; height:100%; overflow:hidden; font-family: system-ui, -apple-system, Arial; background:#000; }
     .ui { position: fixed; bottom: 16px; left: 0; right: 0; display: flex; gap: 10px; justify-content: center; z-index: 10; }
     .ui button { padding: 10px 14px; border-radius: 12px; border: none; background: rgba(0,0,0,.6); color: #fff; font-weight: 600; backdrop-filter: blur(6px); box-shadow: 0 4px 24px rgba(0,0,0,.4); }
     .ui button:active { transform: scale(0.98); }
-
     .overlay { position: fixed; top: 12px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,.55); color:#fff; padding:10px 14px; border-radius:12px; z-index:10; font-weight:700; }
     .overlay.hidden { display:none; }
-
     .rotate { position: fixed; inset: 0; display: grid; place-items: center; background: rgba(0,0,0,.7); color:#fff; z-index: 11; font-weight: 800; text-align:center; padding: 24px; }
     .rotate.hidden { display:none; }
-
     .gate { position: fixed; inset: 0; display: grid; place-items: center; background: rgba(0,0,0,.8); color:#fff; z-index: 12; text-align:center; padding:24px; }
     .gate.hidden { display:none; }
     .gate button { padding: 12px 16px; border-radius: 12px; border: none; background: #1a1a1a; color: #fff; font-weight: 800; }
-
     .preloader{ position:fixed; inset:0; display:grid; place-items:center; background:#000; opacity:.9; color:#fff; z-index:20; font-weight:800; }
     .preloader.hidden{ display:none; }
   </style>
 
-  <!-- A-Frame -->
-  <script src="https://unpkg.com/aframe@1.6.0/dist/aframe.min.js"></script>
-  <!-- MindAR (CDN, стабильная 1.1.5 без module workers) -->
+  <!-- A-Frame (совместимая версия) -->
+  <script src="https://unpkg.com/aframe@1.4.2/dist/aframe.min.js"></script>
+
+  <!-- MindAR 1.1.5: ВАЖНО соблюдать порядок! -->
+  <script src="https://unpkg.com/mind-ar@1.1.5/dist/mindar-image.prod.js"></script>
   <script src="https://unpkg.com/mind-ar@1.1.5/dist/mindar-image-aframe.prod.js"></script>
 </head>
 <body>
@@ -74,7 +72,7 @@
       <a-entity id="orange-rain" position="0 1 0"></a-entity>
     </a-entity>
 
-    <!-- Шапокляк/Гена -->
+    <!-- Шапокляк / Гена -->
     <a-entity id="tgt-shapo" mindar-image-target="targetIndex: 1">
       <a-cone id="lariska-model" radius-bottom="0.12" height="0.25" color="#9c88ff" position="0.1 0.25 0.05"></a-cone>
     </a-entity>
@@ -88,7 +86,7 @@
     <a-camera position="0 0 0"></a-camera>
   </a-scene>
 
-  <!-- ЛОГИКА (инлайн, чтобы исключить 404 js-файлов) -->
+  <!-- ЛОГИКА (инлайн) -->
   <script>
     (() => {
       const $ = (sel, root=document) => root.querySelector(sel);
@@ -105,7 +103,7 @@
       const snapBtn = document.getElementById('btn-snap');
       const enableSnap = () => { if (snapBtn) snapBtn.disabled = false; };
 
-      // iOS гейт (чисто визуальный — скрываем по тапу)
+      // iOS гейт (визуальный оверлей)
       const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
       const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
       const gate = $('#ios-gate');
@@ -127,7 +125,7 @@
       if (s === 'shapo') showHint('Наведите на Шапокляк/Гену — появится Лариска');
       if (s === 'volk') showHint('Найдите Волка на скамейке — рядом появится Заяц');
 
-      // Сцена и диагностика MindAR/A-Frame
+      // Сцена и диагностика
       const scene = document.querySelector('a-scene');
       if (scene) {
         scene.addEventListener('loaded', () => { pre && pre.classList.add('hidden'); console.log('[A-Frame] loaded'); });
@@ -141,7 +139,7 @@
         scene.addEventListener('camera-error', (e) => console.error('[Camera] camera-error', e?.detail || e));
       }
 
-      // Fallback: если ничего не произошло — убираем прелоадер через 6с и показываем подсказку
+      // Фолбэк на случай зависания
       setTimeout(() => {
         if (!pre.classList.contains('hidden')) {
           pre.classList.add('hidden');
@@ -224,7 +222,6 @@
           setTimeout(() => hare.removeAttribute('animation__hop'), 700);
         });
       }
-      const sceneEl = document.querySelector('a-scenes');
       (document.querySelector('a-scene')||document).addEventListener('click', (e) => {
         if (ui && ui.contains(e.target)) return;
         if (!moped) return;
@@ -252,7 +249,7 @@
         const a = document.createElement('a'); a.href = dataURL; a.download = 'souzmult-ar.jpg'; a.click();
       });
 
-      // Кнопка «?»
+      // «?»
       document.getElementById('btn-help')?.addEventListener('click', () => {
         alert(
 `Наведите камеру на фото скульптуры (Чебурашка / Шапокляк–Гена / Волк).
