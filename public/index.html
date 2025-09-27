@@ -13,7 +13,7 @@
     .ui button{padding:10px 14px;border:none;border-radius:12px;background:rgba(0,0,0,.6);color:#fff;font-weight:600;backdrop-filter:blur(6px)}
     .overlay{position:fixed;top:12px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.55);color:#fff;padding:10px 14px;border-radius:12px;z-index:10;font-weight:700}
     .hidden{display:none !important}
-    .pre,.preloader{position:fixed;inset:0;display:grid;place-items:center;background:#000;color:#fff;z-index:20;font-weight:800}
+    .pre{position:fixed;inset:0;display:grid;place-items:center;background:#000;color:#fff;z-index:20;font-weight:800}
     .gate{position:fixed;inset:0;display:grid;place-items:center;background:rgba(0,0,0,.86);color:#fff;z-index:25;text-align:center;padding:24px}
     .gate .row{display:flex;gap:12px;justify-content:center;margin-top:10px}
     .gate button{padding:12px 16px;border:none;border-radius:12px;background:#1a1a1a;color:#fff;font-weight:800}
@@ -31,7 +31,6 @@
   <script src="https://unpkg.com/mind-ar@1.1.5/dist/mindar-image-aframe.prod.js"></script>
 </head>
 <body>
-  <!-- Старые прелоадеры могут остаться — оставим оба id на всякий случай -->
   <div id="pre" class="pre">Загружаем AR…</div>
 
   <!-- Ручной запуск -->
@@ -60,23 +59,34 @@
     embedded
     vr-mode-ui="enabled:false"
     device-orientation-permission-ui="enabled:true"
-    mindar-image="autoStart:false; imageTargetSrc: ./targets/targets.mind; uiLoading:false; uiScanning:false; warmupTolerance:5"
+    mindar-image="autoStart:false; imageTargetSrc: ./targets/targets.mind;
+                  uiLoading:false; uiScanning:false;
+                  warmupTolerance:5; missTolerance:5; maxTrack:3"
     loading-screen="enabled:false"
   >
     <a-entity light="type: ambient; intensity: 0.9"></a-entity>
     <a-entity light="type: directional; intensity: 0.8" position="0 1 0"></a-entity>
 
-    <a-entity id="tgt-cheb" mindar-image-target="targetIndex: 0">
-      <a-entity id="orange-rain" position="0 1 0"></a-entity>
-    </a-entity>
-
-    <a-entity id="tgt-shapo" mindar-image-target="targetIndex: 1">
+    <!-- ВНИМАНИЕ: индексы! -->
+    <!-- 0 — Шапокляк -->
+    <a-entity id="tgt-shapo" mindar-image-target="targetIndex: 0">
       <a-cone id="lariska-model" radius-bottom="0.12" height="0.25" color="#9c88ff" position="0.1 0.25 0.05"></a-cone>
     </a-entity>
 
-    <a-entity id="tgt-volk" mindar-image-target="targetIndex: 2">
-      <a-box id="hare-model" width="0.12" height="0.14" depth="0.08" color="#2ecc71" position="0.35 0.08 0.05"></a-box>
-      <a-torus-knot id="moped-model" p="2" q="3" radius="0.12" radius-tubular="0.02" color="#e67e22" position="-0.35 0.08 0" visible="false"></a-torus-knot>
+    <!-- 1 — Чебурашка -->
+    <a-entity id="tgt-cheb" mindar-image-target="targetIndex: 1">
+      <a-entity id="orange-rain" position="0 1 0"></a-entity>
+    </a-entity>
+
+    <!-- Волк: на всякий случай два индекса (2 И 3) -->
+    <a-entity id="tgt-volk2" mindar-image-target="targetIndex: 2">
+      <a-box id="hare2" width="0.12" height="0.14" depth="0.08" color="#2ecc71" position="0.35 0.08 0.05"></a-box>
+      <a-torus-knot id="moped2" p="2" q="3" radius="0.12" radius-tubular="0.02" color="#e67e22" position="-0.35 0.08 0" visible="false"></a-torus-knot>
+    </a-entity>
+
+    <a-entity id="tgt-volk3" mindar-image-target="targetIndex: 3">
+      <a-box id="hare3" width="0.12" height="0.14" depth="0.08" color="#2ecc71" position="0.35 0.08 0.05"></a-box>
+      <a-torus-knot id="moped3" p="2" q="3" radius="0.12" radius-tubular="0.02" color="#e67e22" position="-0.35 0.08 0" visible="false"></a-torus-knot>
     </a-entity>
 
     <a-camera position="0 0 0"></a-camera>
@@ -92,20 +102,15 @@
       const showHint = t => { hint.textContent = t; hint.classList.remove('hidden'); };
       const hideHint = () => hint.classList.add('hidden');
       const enableSnap = () => { $('#btn-snap').disabled = false; };
-
-      function nukeOverlays(){
-        // Удаляем ВСЕ возможные лоадеры/оверлеи, даже если они из прошлых версий
-        ['pre','preloader','start-gate','gate'].forEach(id => document.getElementById(id)?.classList.add('hidden'));
+      const nukeOverlays = () => {
+        $('#pre')?.classList.add('hidden');
         document.querySelectorAll('.pre,.preloader,.mindar-ui-overlay,.mindar-ui-loading,.mindar-ui-scanning').forEach(el => el.remove());
         document.body.style.background = 'transparent';
-      }
+      };
 
       async function waitMindAR(timeout = 8000) {
         const t0 = performance.now();
-        while (!getMIS()) {
-          await new Promise(r => setTimeout(r, 50));
-          if (performance.now() - t0 > timeout) break;
-        }
+        while (!getMIS()) { await new Promise(r => setTimeout(r, 50)); if (performance.now()-t0 > timeout) break; }
         return getMIS();
       }
 
@@ -146,49 +151,40 @@
         try { await mis.stop?.(); } catch {}
         try {
           await mis.start?.({ facingMode });
-          // Проверим, что видео действительно отрисовывается
           setTimeout(() => {
             const v = mis.video || mis._video;
             const w = v?.videoWidth||0, h = v?.videoHeight||0;
             console.log('[MindAR video]', w, h, 'mode=', facingMode);
-            nukeOverlays(); // на всякий случай ещё раз
+            nukeOverlays();
             if (w === 0 || h === 0) {
               console.warn('Video is 0x0 — retry with alternate camera');
               mis.stop?.();
               const alt = facingMode === 'environment' ? 'user' : 'environment';
               startAR(alt);
             }
-          }, 2500);
+          }, 2000);
         } catch (err) {
           console.error('mis.start failed', err);
           nukeOverlays();
           showHint('Старт камеры не удался. Попробуйте другой режим или перезагрузите устройство.');
           if (!document.body.contains(gate)) document.body.appendChild(gate);
         }
-
-        // дубль: даже если что-то застрянет — принудительно скрыть лоадеры через 5с
         setTimeout(nukeOverlays, 5000);
       }
 
       $('#start-back').addEventListener('click', () => { gate.remove(); startAR('environment'); });
       $('#start-front').addEventListener('click', () => { gate.remove(); startAR('user'); });
 
-      // UI
-      $('#btn-help').addEventListener('click', () => {
-        alert('Если кажется, что «вечно грузится»: мы отключили встроенные лоадеры. Просто наведи камеру на таргет 🙂');
-      });
-      $('#btn-snap').addEventListener('click', async () => {
-        const c = document.querySelector('canvas'); if (!c) return alert('Камера ещё не готова');
-        const url = c.toDataURL('image/jpeg', 0.95);
-        try {
-          const blob = await (await fetch(url)).blob();
-          const file = new File([blob], 'souzmult-ar.jpg', {type:'image/jpeg'});
-          if (navigator.canShare?.({files:[file]})) { await navigator.share({files:[file], title:'AR фото'}); return; }
-        } catch {}
-        const a=document.createElement('a'); a.href=url; a.download='souzmult-ar.jpg'; a.click();
-      });
+      // ==== ЛОГИКА ТАРГЕТОВ ====
 
-      // Контент
+      // Подсказки
+      function bindTarget(el, {tip, onFound, onLost}) {
+        if (!el) return;
+        el.addEventListener('targetFound', () => { showHint(tip); onFound && onFound(); });
+        el.addEventListener('targetLost',  () => { hideHint(); onLost  && onLost();  });
+      }
+
+      // ЧЕБУРАШКА — дождь апельсинов
       const rnd=(a,b)=>a+Math.random()*(b-a);
       const orangeContainer=$('#orange-rain'); let rainTimer=null, count=0; const CAP=40;
       function spawnOrange(){
@@ -203,25 +199,62 @@
         o.addEventListener('animationcomplete__fall', ()=>{ o.remove(); count=Math.max(0,count-1); });
         orangeContainer.appendChild(o); count++;
       }
-      const bind=(id, {tip,onFound,onLost})=>{
-        const el=document.getElementById(id); if(!el) return;
-        el.addEventListener('targetFound', ()=>{ hint.textContent=tip; hint.classList.remove('hidden'); onFound&&onFound(); });
-        el.addEventListener('targetLost',  ()=>{ hint.classList.add('hidden'); onLost&&onLost(); });
-      };
-      bind('tgt-cheb',{ tip:'Чебурашка — ловите апельсинки! 🍊',
+      bindTarget($('#tgt-cheb'), {
+        tip:'Чебурашка — ловите апельсинки! 🍊',
         onFound(){ if(!rainTimer) rainTimer=setInterval(spawnOrange,260); },
         onLost(){ if(rainTimer){ clearInterval(rainTimer); rainTimer=null; } count=0; if(orangeContainer) orangeContainer.innerHTML=''; }
       });
-      const lariska=$('#lariska-model');
-      lariska?.addEventListener('click', ()=>{ lariska.setAttribute('animation__wave','property: rotation; to: 0 45 0; dir: alternate; dur: 350; loop: 4; easing: easeInOutSine'); setTimeout(()=> lariska.removeAttribute('animation__wave'), 1600); });
-      bind('tgt-shapo',{ tip:'Лариска рядом — нажми, чтобы помахала 🐭', onFound(){}, onLost(){} });
-      const moped=$('#moped-model'), hare=$('#hare-model'); let volkActive=false;
-      $('#tgt-volk').addEventListener('targetFound', ()=> volkActive=true);
-      $('#tgt-volk').addEventListener('targetLost',  ()=> volkActive=false);
-      hare?.addEventListener('click', ()=>{ hare.setAttribute('animation__hop','property: position; to: 0.35 0.16 0.05; dir: alternate; dur: 250; loop: 2; easing:easeOutQuad'); setTimeout(()=> hare.removeAttribute('animation__hop'), 700); });
-      scene.addEventListener('click', (e)=>{ if (ui.contains(e.target)) return; if (!moped || !volkActive) return; const vis=moped.getAttribute('visible'); moped.setAttribute('visible', !(vis===true || vis==='true')); });
 
-      // На всякий случай: скрыть всё ещё раз через 2с после загрузки страницы
+      // Шапокляк — Лариска машет
+      const lariska=$('#lariska-model');
+      lariska?.addEventListener('click', ()=>{
+        lariska.setAttribute('animation__wave','property: rotation; to: 0 45 0; dir: alternate; dur: 350; loop: 4; easing: easeInOutSine');
+        setTimeout(()=> lariska.removeAttribute('animation__wave'), 1600);
+      });
+      bindTarget($('#tgt-shapo'), { tip:'Лариска рядом — нажми, чтобы помахала 🐭', onFound(){}, onLost(){} });
+
+      // Волк — два индекса: 2 и 3. Поведение одинаковое.
+      function bindVolk(anchorId, hareId, mopedId){
+        const anchor = document.getElementById(anchorId);
+        const hare   = document.getElementById(hareId);
+        const moped  = document.getElementById(mopedId);
+        if (!anchor || !hare || !moped) return;
+
+        let active=false;
+        anchor.addEventListener('targetFound', ()=> active=true);
+        anchor.addEventListener('targetLost',  ()=> { active=false; moped.setAttribute('visible', false); });
+
+        hare.addEventListener('click', ()=>{
+          hare.setAttribute('animation__hop','property: position; to: 0.35 0.16 0.05; dir: alternate; dur: 250; loop: 2; easing:easeOutQuad');
+          setTimeout(()=> hare.removeAttribute('animation__hop'), 700);
+        });
+
+        scene.addEventListener('click', (e)=>{
+          if (ui.contains(e.target)) return;
+          if (!active) return;
+          const vis = moped.getAttribute('visible');
+          moped.setAttribute('visible', !(vis===true || vis==='true'));
+        });
+      }
+      bindVolk('tgt-volk2','hare2','moped2');
+      bindVolk('tgt-volk3','hare3','moped3');
+
+      // UI
+      $('#btn-help').addEventListener('click', () => {
+        alert('Наведи камеру на скульптуру:\n• Шапокляк — Лариска машет\n• Чебурашка — дождь апельсинов\n• Волк — заяц подпрыгивает, мопед включается по нажатию');
+      });
+      $('#btn-snap').addEventListener('click', async () => {
+        const c = document.querySelector('canvas'); if (!c) return alert('Камера ещё не готова');
+        const url = c.toDataURL('image/jpeg', 0.95);
+        try {
+          const blob = await (await fetch(url)).blob();
+          const file = new File([blob], 'souzmult-ar.jpg', {type:'image/jpeg'});
+          if (navigator.canShare?.({files:[file]})) { await navigator.share({files:[file], title:'AR фото'}); return; }
+        } catch {}
+        const a=document.createElement('a'); a.href=url; a.download='souzmult-ar.jpg'; a.click();
+      });
+
+      // На всякий случай: убрать лоадеры ещё раз через 2с
       setTimeout(nukeOverlays, 2000);
     })();
   </script>
