@@ -31,7 +31,6 @@
 <body>
   <div id="pre" class="pre">Загружаем AR…</div>
 
-  <!-- Ручной запуск -->
   <div id="gate" class="gate">
     <div>
       <h2>Включить камеру</h2>
@@ -39,7 +38,7 @@
         <button id="start-back">Задняя</button>
         <button id="start-front">Фронтальная</button>
       </div>
-      <p style="opacity:.8;margin-top:10px">Если что-то не работает — попробуйте другой режим и закройте приложения/вкладки, которые используют камеру.</p>
+      <p style="opacity:.8;margin-top:10px">Если не работает — выбери другой режим и закрой приложения/вкладки с камерой.</p>
     </div>
   </div>
 
@@ -58,124 +57,135 @@
     device-orientation-permission-ui="enabled:true"
     mindar-image="autoStart:false; imageTargetSrc: ./targets/targets.mind;
                   uiLoading:false; uiScanning:false;
-                  warmupTolerance:5; missTolerance:5; maxTrack:3"
+                  warmupTolerance:5; missTolerance:5; maxTrack:4"
     loading-screen="enabled:false"
   >
     <a-entity light="type: ambient; intensity: 0.9"></a-entity>
     <a-entity light="type: directional; intensity: 0.8" position="0 1 0"></a-entity>
 
-    <!-- === Шапокляк: индексы 0,1,2 (твои 1–3) === -->
-    <a-entity id="shapo-0" mindar-image-target="targetIndex: 0">
-      <a-cone class="lariska" radius-bottom="0.12" height="0.25" color="#9c88ff" position="0.1 0.25 0.05"></a-cone>
-    </a-entity>
-    <a-entity id="shapo-1" mindar-image-target="targetIndex: 1">
-      <a-cone class="lariska" radius-bottom="0.12" height="0.25" color="#9c88ff" position="0.1 0.25 0.05"></a-cone>
-    </a-entity>
-    <a-entity id="shapo-2" mindar-image-target="targetIndex: 2">
-      <a-cone class="lariska" radius-bottom="0.12" height="0.25" color="#9c88ff" position="0.1 0.25 0.05"></a-cone>
-    </a-entity>
-
-    <!-- === Чебурашка: индексы 3–4 (твои 4–5) === -->
-    <a-entity id="cheb-3" mindar-image-target="targetIndex: 3"><a-entity class="orange-rain" position="0 1 0"></a-entity></a-entity>
-    <a-entity id="cheb-4" mindar-image-target="targetIndex: 4"><a-entity class="orange-rain" position="0 1 0"></a-entity></a-entity>
-
-    <!-- === Гена: индексы 5–6 (твои 6–7) === -->
-    <a-entity id="gena-5" mindar-image-target="targetIndex: 5"><a-entity class="notes"></a-entity></a-entity>
-    <a-entity id="gena-6" mindar-image-target="targetIndex: 6"><a-entity class="notes"></a-entity></a-entity>
-
-    <!-- === Волк: индексы 7–10 (твои 8–11) === -->
-    <a-entity id="volk-7"  mindar-image-target="targetIndex: 7"><a-box class="hare" width="0.12" height="0.14" depth="0.08" color="#2ecc71" position="0.35 0.08 0.05"></a-box><a-torus-knot class="moped" p="2" q="3" radius="0.12" radius-tubular="0.02" color="#e67e22" position="-0.35 0.08 0" visible="false"></a-torus-knot></a-entity>
-    <a-entity id="volk-8"  mindar-image-target="targetIndex: 8"><a-box class="hare" width="0.12" height="0.14" depth="0.08" color="#2ecc71" position="0.35 0.08 0.05"></a-box><a-torus-knot class="moped" p="2" q="3" radius="0.12" radius-tubular="0.02" color="#e67e22" position="-0.35 0.08 0" visible="false"></a-torus-knot></a-entity>
-    <a-entity id="volk-9"  mindar-image-target="targetIndex: 9"><a-box class="hare" width="0.12" height="0.14" depth="0.08" color="#2ecc71" position="0.35 0.08 0.05"></a-box><a-torus-knot class="moped" p="2" q="3" radius="0.12" radius-tubular="0.02" color="#e67e22" position="-0.35 0.08 0" visible="false"></a-torus-knot></a-entity>
-    <a-entity id="volk-10" mindar-image-target="targetIndex:10"><a-box class="hare" width="0.12" height="0.14" depth="0.08" color="#2ecc71" position="0.35 0.08 0.05"></a-box><a-torus-knot class="moped" p="2" q="3" radius="0.12" radius-tubular="0.02" color="#e67e22" position="-0.35 0.08 0" visible="false"></a-torus-knot></a-entity>
+    <!-- якоря создадим программно -->
+    <a-entity id="anchors-root"></a-entity>
 
     <a-camera position="0 0 0"></a-camera>
   </a-scene>
 
   <script>
-    (() => {
-      const $ = s => document.querySelector(s);
-      const $$ = s => Array.from(document.querySelectorAll(s));
-      const scene = document.querySelector('a-scene');
-      const getMIS = () => scene?.systems?.['mindar-image-system'];
-      const gate = $('#gate'), hint = $('#hint'), ui = $('#ui');
+  (() => {
+    const $ = s => document.querySelector(s);
+    const $$ = s => Array.from(document.querySelectorAll(s));
+    const scene = document.querySelector('a-scene');
+    const anchorsRoot = $('#anchors-root');
+    const getMIS = () => scene?.systems?.['mindar-image-system'];
+    const gate = $('#gate'), hint = $('#hint'), ui = $('#ui');
 
-      const showHint = t => { hint.textContent = t; hint.classList.remove('hidden'); };
-      const hideHint = () => hint.classList.add('hidden');
-      const enableSnap = () => { $('#btn-snap').disabled = false; };
-      const nukeOverlays = () => {
-        $('#pre')?.classList.add('hidden');
-        document.querySelectorAll('.pre,.preloader,.mindar-ui-overlay,.mindar-ui-loading,.mindar-ui-scanning').forEach(el => el.remove());
-        document.body.style.background = 'transparent';
-      };
+    const showHint = t => { hint.textContent = t; hint.classList.remove('hidden'); };
+    const hideHint = () => hint.classList.add('hidden');
+    const enableSnap = () => { $('#btn-snap').disabled = false; };
+    const nukeOverlays = () => {
+      $('#pre')?.classList.add('hidden');
+      document.querySelectorAll('.pre,.preloader,.mindar-ui-overlay,.mindar-ui-loading,.mindar-ui-scanning').forEach(el => el.remove());
+      document.body.style.background = 'transparent';
+    };
 
-      async function waitMindAR(timeout = 8000) {
-        const t0 = performance.now();
-        while (!getMIS()) { await new Promise(r => setTimeout(r, 50)); if (performance.now()-t0 > timeout) break; }
-        return getMIS();
+    async function waitMindAR(timeout = 8000) {
+      const t0 = performance.now();
+      while (!getMIS()) { await new Promise(r => setTimeout(r, 50)); if (performance.now()-t0 > timeout) break; }
+      return getMIS();
+    }
+
+    scene.addEventListener('loaded', () => console.log('[A-Frame] loaded'));
+    scene.addEventListener('arReady', () => {
+      const mis = getMIS();
+      const v = mis?.video || mis?._video;
+      if (v) {
+        v.setAttribute('playsinline','');
+        Object.assign(v.style, {position:'fixed', inset:'0', objectFit:'cover', zIndex:'0', display:'block'});
+        try { v.play?.(); } catch {}
       }
+      enableSnap(); nukeOverlays();
+      console.log('[MindAR] arReady (video layered)');
+    });
+    scene.addEventListener('arError', (e) => {
+      nukeOverlays();
+      console.error('[MindAR] arError', e?.detail || e);
+      showHint('Не удалось запустить камеру. Попробуйте другой режим или закройте приложения с камерой.');
+      if (!document.body.contains(gate)) document.body.appendChild(gate);
+    });
 
-      scene.addEventListener('loaded', () => console.log('[A-Frame] loaded'));
-      scene.addEventListener('arReady', () => {
-        const mis = getMIS();
-        const v = mis?.video || mis?._video;
-        if (v) {
-          v.setAttribute('playsinline','');
-          Object.assign(v.style, {position:'fixed', inset:'0', objectFit:'cover', zIndex:'0', display:'block'});
-          try { v.play?.(); } catch {}
-        }
-        enableSnap(); nukeOverlays();
-        console.log('[MindAR] arReady (video layered)');
-      });
-      scene.addEventListener('arError', (e) => {
-        nukeOverlays();
-        console.error('[MindAR] arError', e?.detail || e);
-        showHint('Не удалось запустить камеру. Попробуйте другой режим или закройте приложения с камерой.');
-        if (!document.body.contains(gate)) document.body.appendChild(gate);
-      });
-
-      async function startAR(facingMode){
-        hideHint(); $('#pre')?.classList.remove('hidden');
-        const mis = await waitMindAR();
-        if (!mis) { nukeOverlays(); showHint('AR-ядро не загрузилось. Обновите страницу.'); if (!document.body.contains(gate)) document.body.appendChild(gate); return; }
-        try { await mis.stop?.(); } catch {}
-        try {
-          await mis.start?.({ facingMode });
-          setTimeout(() => {
-            const v = mis.video || mis._video;
-            const w = v?.videoWidth||0, h = v?.videoHeight||0;
-            console.log('[MindAR video]', w, h, 'mode=', facingMode);
-            nukeOverlays();
-          }, 2000);
-        } catch (err) {
-          console.error('mis.start failed', err);
+    async function startAR(facingMode){
+      hideHint(); $('#pre')?.classList.remove('hidden');
+      const mis = await waitMindAR();
+      if (!mis) { nukeOverlays(); showHint('AR-ядро не загрузилось. Обновите страницу.'); if (!document.body.contains(gate)) document.body.appendChild(gate); return; }
+      try { await mis.stop?.(); } catch {}
+      try {
+        await mis.start?.({ facingMode });
+        setTimeout(() => {
+          const v = mis.video || mis._video;
+          console.log('[MindAR video]', v?.videoWidth||0, v?.videoHeight||0, 'mode=', facingMode);
           nukeOverlays();
-          showHint('Старт камеры не удался. Попробуйте другой режим или перезагрузите устройство.');
-          if (!document.body.contains(gate)) document.body.appendChild(gate);
-        }
-        setTimeout(nukeOverlays, 5000);
+        }, 1500);
+      } catch (err) {
+        console.error('mis.start failed', err);
+        nukeOverlays();
+        showHint('Старт камеры не удался. Попробуйте другой режим или перезагрузите устройство.');
+        if (!document.body.contains(gate)) document.body.appendChild(gate);
+      }
+      setTimeout(nukeOverlays, 4000);
+    }
+
+    $('#start-back').addEventListener('click', () => { gate.remove(); startAR('environment'); });
+    $('#start-front').addEventListener('click', () => { gate.remove(); startAR('user'); });
+
+    // ---------- МАППИНГ И АНКОРЫ ----------
+    // helper: какой тип по индексу (один якорь на индекс, без дублей!)
+    function typeForIndex(i){
+      // предпочитаем 0-базу
+      if ([0,1,2].includes(i)) return 'shapo';
+      if ([3,4].includes(i))   return 'cheb';
+      if ([5,6].includes(i))   return 'gena';
+      if ([7,8,9,10].includes(i)) return 'volk';
+      // fallback: 1-база
+      if ([1,2,3].includes(i)) return 'shapo';
+      if ([4,5].includes(i))   return 'cheb';
+      if ([6,7].includes(i))   return 'gena';
+      if ([8,9,10,11].includes(i)) return 'volk';
+      return null;
+    }
+
+    // хранение активных волков -> один клик включает мопеды у всех активных
+    const activeVolk = new Set();
+
+    function bindTarget(el, {tip,onFound,onLost}) {
+      if (!el) return;
+      el.addEventListener('targetFound', () => { showHint(tip); onFound && onFound(); });
+      el.addEventListener('targetLost',  () => { hideHint(); onLost  && onLost();  });
+    }
+
+    const rnd=(a,b)=>a+Math.random()*(b-a);
+
+    function makeAnchor(i, type){
+      const a = document.createElement('a-entity');
+      a.setAttribute('id', `anchor-${type}-${i}`);
+      a.setAttribute('mindar-image-target', `targetIndex: ${i}`);
+
+      if (type === 'shapo'){
+        const l = document.createElement('a-cone');
+        l.setAttribute('radius-bottom','0.12'); l.setAttribute('height','0.25');
+        l.setAttribute('color','#9c88ff'); l.setAttribute('position','0.1 0.25 0.05');
+        a.appendChild(l);
+        l.addEventListener('click', ()=>{
+          l.setAttribute('animation__wave','property: rotation; to: 0 45 0; dir: alternate; dur: 350; loop: 4; easing: easeInOutSine');
+          setTimeout(()=> l.removeAttribute('animation__wave'), 1600);
+        });
+        bindTarget(a,{tip:'Лариска рядом — нажми, чтобы помахала 🐭'});
       }
 
-      $('#start-back').addEventListener('click', () => { gate.remove(); startAR('environment'); });
-      $('#start-front').addEventListener('click', () => { gate.remove(); startAR('user'); });
-
-      // ==== ПОВЕДЕНИЕ ДЛЯ ГРУПП ====
-
-      // Шапокляк → Лариска машет
-      $$('#shapo-0, #shapo-1, #shapo-2').forEach(anchor=>{
-        const lariska = anchor.querySelector('.lariska');
-        lariska?.addEventListener('click', ()=>{
-          lariska.setAttribute('animation__wave','property: rotation; to: 0 45 0; dir: alternate; dur: 350; loop: 4; easing: easeInOutSine');
-          setTimeout(()=> lariska.removeAttribute('animation__wave'), 1600);
-        });
-        bindTarget(anchor, { tip:'Лариска рядом — нажми, чтобы помахала 🐭' });
-      });
-
-      // Чебурашка → апельсиновый дождь
-      const rnd=(a,b)=>a+Math.random()*(b-a);
-      $$('#cheb-3, #cheb-4').forEach(anchor=>{
-        const rain = anchor.querySelector('.orange-rain'); let timer=null, count=0; const CAP=40;
-        function spawnOrange(){
+      if (type === 'cheb'){
+        const rain = document.createElement('a-entity');
+        rain.setAttribute('id', `rain-${i}`); rain.setAttribute('position','0 1 0');
+        a.appendChild(rain);
+        let timer=null, count=0; const CAP=40;
+        function spawn(){
           if(count>=CAP) return;
           const o=document.createElement('a-sphere');
           o.setAttribute('radius', rnd(0.04,0.08));
@@ -187,17 +197,19 @@
           o.addEventListener('animationcomplete__fall', ()=>{ o.remove(); count=Math.max(0,count-1); });
           rain.appendChild(o); count++;
         }
-        bindTarget(anchor, {
+        bindTarget(a,{
           tip:'Чебурашка — ловите апельсинки! 🍊',
-          onFound(){ if(!timer) timer=setInterval(spawnOrange,260); },
+          onFound(){ if(!timer) timer=setInterval(spawn,260); },
           onLost(){ if(timer){ clearInterval(timer); timer=null; } count=0; rain.innerHTML=''; }
         });
-      });
+      }
 
-      // Гена → «ноты» вверх
-      $$('#gena-5, #gena-6').forEach(anchor=>{
-        const notes = anchor.querySelector('.notes'); let timer=null, cnt=0; const CAP=32, palette=['#2ecc71','#1abc9c','#3498db','#9b59b6','#f1c40f'];
-        function spawnNote(){
+      if (type === 'gena'){
+        const notes = document.createElement('a-entity');
+        notes.setAttribute('id', `notes-${i}`);
+        a.appendChild(notes);
+        let timer=null, cnt=0; const CAP=32, palette=['#2ecc71','#1abc9c','#3498db','#9b59b6','#f1c40f'];
+        function spawn(){
           if(cnt>=CAP) return;
           const n=document.createElement('a-sphere');
           n.setAttribute('radius', rnd(0.02,0.05));
@@ -211,60 +223,69 @@
           n.addEventListener('animationcomplete__rise', ()=>{ n.remove(); cnt=Math.max(0,cnt-1); });
           notes.appendChild(n); cnt++;
         }
-        bindTarget(anchor, {
+        bindTarget(a,{
           tip:'Гена играет — летят нотки 🎶',
-          onFound(){ if(!timer) timer=setInterval(spawnNote,220); },
+          onFound(){ if(!timer) timer=setInterval(spawn,220); },
           onLost(){ if(timer){ clearInterval(timer); timer=null; } cnt=0; notes.innerHTML=''; }
         });
-      });
+      }
 
-      // Волк → заяц подпрыгивает, мопед по клику
-      $$('#volk-7, #volk-8, #volk-9, #volk-10').forEach(anchor=>{
-        const hare = anchor.querySelector('.hare');
-        const moped = anchor.querySelector('.moped');
+      if (type === 'volk'){
+        const hare = document.createElement('a-box');
+        hare.setAttribute('width','0.12'); hare.setAttribute('height','0.14'); hare.setAttribute('depth','0.08');
+        hare.setAttribute('color','#2ecc71'); hare.setAttribute('position','0.35 0.08 0.05');
+        const moped = document.createElement('a-torus-knot');
+        moped.setAttribute('p','2'); moped.setAttribute('q','3');
+        moped.setAttribute('radius','0.12'); moped.setAttribute('radius-tubular','0.02');
+        moped.setAttribute('color','#e67e22'); moped.setAttribute('position','-0.35 0.08 0'); moped.setAttribute('visible','false');
+        moped.setAttribute('id',`moped-${i}`);
+        a.appendChild(hare); a.appendChild(moped);
         let active=false;
-        anchor.addEventListener('targetFound', ()=> active=true);
-        anchor.addEventListener('targetLost',  ()=> { active=false; moped.setAttribute('visible', false); });
-        hare?.addEventListener('click', ()=>{
+        a.addEventListener('targetFound', ()=> { active=true; activeVolk.add(i); });
+        a.addEventListener('targetLost',  ()=> { active=false; activeVolk.delete(i); moped.setAttribute('visible', false); });
+        hare.addEventListener('click', ()=>{
           hare.setAttribute('animation__hop','property: position; to: 0.35 0.16 0.05; dir: alternate; dur: 250; loop: 2; easing:easeOutQuad');
           setTimeout(()=> hare.removeAttribute('animation__hop'), 700);
         });
-        scene.addEventListener('click', (e)=>{
-          if (ui.contains(e.target)) return;
-          if (!active) return;
-          const vis = moped.getAttribute('visible');
-          moped.setAttribute('visible', !(vis===true || vis==='true'));
-        });
-        bindTarget(anchor, { tip:'Волк здесь — заяц дразнит, мопед по клику 🛵' });
-      });
-
-      function bindTarget(el, {tip,onFound,onLost}) {
-        el.addEventListener('targetFound', () => { showHint(tip); onFound && onFound(); });
-        el.addEventListener('targetLost',  () => { hideHint(); onLost  && onLost();  });
+        bindTarget(a,{ tip:'Волк здесь — заяц дразнит, мопед по клику 🛵' });
       }
 
-      // UI
-      $('#btn-help').addEventListener('click', () => {
-        alert('Наведи камеру на скульптуру:\n• Шапокляк (индексы 0–2)\n• Чебурашка (3–4)\n• Гена (5–6)\n• Волк (7–10)');
-      });
-      $('#btn-snap').addEventListener('click', async () => {
-        const c = document.querySelector('canvas'); if (!c) return alert('Камера ещё не готова');
-        const url = c.toDataURL('image/jpeg', 0.95);
-        try {
-          const blob = await (await fetch(url)).blob();
-          const file = new File([blob], 'souzmult-ar.jpg', {type:'image/jpeg'});
-          if (navigator.canShare?.({files:[file]})) { await navigator.share({files:[file], title:'AR фото'}); return; }
-        } catch {}
-        const a=document.createElement('a'); a.href=url; a.download='souzmult-ar.jpg'; a.click();
-      });
+      anchorsRoot.appendChild(a);
+    }
 
-      // старт камеры
-      $('#start-back').addEventListener('click', () => { gate.remove(); startAR('environment'); });
-      $('#start-front').addEventListener('click', () => { gate.remove(); startAR('user'); });
+    // создаём якоря на 0..11 по правилам
+    for (let i=0; i<=11; i++){
+      const t = typeForIndex(i);
+      if (t) makeAnchor(i, t);
+    }
 
-      // подчистим лоадеры ещё раз через 2с
-      setTimeout(nukeOverlays, 2000);
-    })();
+    // один обработчик клика по сцене — включает/выключает мопед у всех активных волков
+    scene.addEventListener('click', (e)=>{
+      if (ui.contains(e.target)) return;
+      activeVolk.forEach(i=>{
+        const moped = document.getElementById(`moped-${i}`);
+        if (!moped) return;
+        const vis = moped.getAttribute('visible');
+        moped.setAttribute('visible', !(vis===true || vis==='true'));
+      });
+    });
+
+    // UI
+    $('#btn-help').addEventListener('click', () => {
+      alert('Наведи камеру на скульптуру:\n• Шапокляк (индексы 0–2 или 1–3)\n• Чебурашка (3–4 или 4–5)\n• Гена (5–6 или 6–7)\n• Волк (7–10 или 8–11)');
+    });
+    $('#btn-snap').addEventListener('click', async () => {
+      const c = document.querySelector('canvas'); if (!c) return alert('Камера ещё не готова');
+      const url = c.toDataURL('image/jpeg', 0.95);
+      try {
+        const blob = await (await fetch(url)).blob();
+        const file = new File([blob], 'souzmult-ar.jpg', {type:'image/jpeg'});
+        if (navigator.canShare?.({files:[file]})) { await navigator.share({files:[file], title:'AR фото'}); return; }
+      } catch {}
+      const a=document.createElement('a'); a.href=url; a.download='souzmult-ar.jpg'; a.click();
+    });
+
+  })();
   </script>
 </body>
 </html>
