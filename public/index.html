@@ -17,11 +17,16 @@
     .gate{position:fixed;inset:0;display:grid;place-items:center;background:rgba(0,0,0,.86);color:#fff;z-index:25;text-align:center;padding:24px}
     .gate .row{display:flex;gap:12px;justify-content:center;margin-top:10px}
     .gate button{padding:12px 16px;border:none;border-radius:12px;background:#1a1a1a;color:#fff;font-weight:800}
+
+    /* Скрываем ВСЕ стандартные UI MindAR (уголки, «Scanning…», «Loading…») */
+    .mindar-ui-overlay,
+    .mindar-ui-scanning,
+    .mindar-ui-loading { display:none !important; opacity:0 !important; visibility:hidden !important; }
   </style>
 
-  <!-- A-Frame 1.2.0 (стабильно с MindAR 1.1.5) -->
+  <!-- A-Frame 1.2.0 -->
   <script src="https://aframe.io/releases/1.2.0/aframe.min.js"></script>
-  <!-- MindAR 1.1.5: ВАЖЕН ПОРЯДОК: core -> aframe -->
+  <!-- MindAR 1.1.5: core -> aframe -->
   <script src="https://unpkg.com/mind-ar@1.1.5/dist/mindar-image.prod.js"></script>
   <script src="https://unpkg.com/mind-ar@1.1.5/dist/mindar-image-aframe.prod.js"></script>
 </head>
@@ -34,7 +39,7 @@
         <button id="start-back">Задняя</button>
         <button id="start-front">Фронтальная</button>
       </div>
-      <p style="opacity:.8;margin-top:10px">Если висит «Загружаем AR…» — попробуйте другой режим или закройте приложения/вкладки, которые используют камеру.</p>
+      <p style="opacity:.8;margin-top:10px">Если что-то не работает — попробуйте другой режим и закройте приложения/вкладки, которые используют камеру.</p>
     </div>
   </div>
 
@@ -47,13 +52,13 @@
     <button id="btn-ticket" onclick="location.href='ticket.html'">🎟️ Билеты</button>
   </div>
 
-  <!-- Сцена: один targets.mind, автостарт выкл -->
+  <!-- Сцена: отключены mindar UI, автостарт выкл -->
   <a-scene
     renderer="alpha:true; physicallyCorrectLights:true; antialias:true"
     embedded
     vr-mode-ui="enabled:false"
     device-orientation-permission-ui="enabled:true"
-    mindar-image="autoStart: false; imageTargetSrc: ./targets/targets.mind; warmupTolerance:5"
+    mindar-image="autoStart:false; imageTargetSrc: ./targets/targets.mind; uiLoading:false; uiScanning:false; warmupTolerance:5"
     loading-screen="enabled:false"
   >
     <a-entity light="type: ambient; intensity: 0.9"></a-entity>
@@ -86,7 +91,6 @@
       const hideHint = () => hint.classList.add('hidden');
       const enableSnap = () => { $('#btn-snap').disabled = false; };
 
-      // Ждём полной инициализации системы MindAR
       async function waitMindAR(timeout = 8000) {
         const t0 = performance.now();
         while (!getMIS()) {
@@ -97,15 +101,21 @@
       }
 
       scene.addEventListener('loaded', () => console.log('[A-Frame] loaded'));
-      scene.addEventListener('arReady', () => { pre.classList.add('hidden'); enableSnap(); console.log('[MindAR] arReady'); });
+      scene.addEventListener('arReady', () => {
+        // жёстко удаляем все лоадеры/оверлеи
+        pre?.classList.add('hidden'); pre?.remove();
+        document.querySelector('.mindar-ui-overlay')?.remove();
+        document.querySelector('.mindar-ui-loading')?.remove();
+        document.querySelector('.mindar-ui-scanning')?.remove();
+        enableSnap();
+        console.log('[MindAR] arReady');
+      });
       scene.addEventListener('arError', (e) => {
         pre.classList.add('hidden');
         console.error('[MindAR] arError', e?.detail || e);
         showHint('Не удалось запустить камеру. Попробуйте другой режим или закройте приложения с камерой.');
         if (!document.body.contains(gate)) document.body.appendChild(gate);
       });
-      scene.addEventListener('camera-init', () => console.log('[Camera] camera-init'));
-      scene.addEventListener('camera-error', (e) => console.error('[Camera] camera-error', e?.detail || e));
 
       async function startAR(facingMode){
         hideHint();
@@ -120,11 +130,10 @@
         }
 
         try { await mis.stop?.(); } catch {}
-
         try {
           await mis.start?.({ facingMode });
 
-          // Через 2.5с проверяем, привязалось ли видео к текстуре
+          // через 2.5с проверим, что видео реально работает
           setTimeout(() => {
             const v = mis.video || mis._video;
             const w = v?.videoWidth||0, h = v?.videoHeight||0;
@@ -149,7 +158,7 @@
 
       // UI
       $('#btn-help').addEventListener('click', () => {
-        alert('Если висит «Загружаем AR…»: нажмите «Фронтальная» или «Задняя», закройте другие приложения/вкладки с камерой и попробуйте снова.');
+        alert('Если кажется, что «вечно грузится»: это скан-рамка MindAR. Мы её отключили. Теперь просто наведи камеру на таргет 😊');
       });
       $('#btn-snap').addEventListener('click', async () => {
         const c = document.querySelector('canvas'); if (!c) return alert('Камера ещё не готова');
