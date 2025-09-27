@@ -5,15 +5,12 @@
   <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
   <title>Союзмультпарк — AR</title>
 
-  <!-- Иконка -->
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 64 64%22><text y=%2250%25%22 x=%2250%25%22 dominant-baseline=%22middle%22 text-anchor=%22middle%22 font-size=%2248%22>🎟️</text></svg>">
 
-  <!-- Стили (инлайн оставлю минимальные, можно вернуть styles.css если хочешь) -->
   <style>
     html, body { margin:0; padding:0; height:100%; overflow:hidden; font-family: system-ui, -apple-system, Arial; background:#000; }
     .ui { position: fixed; bottom: 16px; left: 0; right: 0; display: flex; gap: 10px; justify-content: center; z-index: 10; }
     .ui button { padding: 10px 14px; border-radius: 12px; border: none; background: rgba(0,0,0,.6); color: #fff; font-weight: 600; backdrop-filter: blur(6px); box-shadow: 0 4px 24px rgba(0,0,0,.4); }
-    .ui button:active { transform: scale(0.98); }
     .overlay { position: fixed; top: 12px; left: 50%; transform: translateX(-50%); background: rgba(0,0,0,.55); color:#fff; padding:10px 14px; border-radius:12px; z-index:10; font-weight:700; }
     .overlay.hidden { display:none; }
     .rotate { position: fixed; inset: 0; display: grid; place-items: center; background: rgba(0,0,0,.7); color:#fff; z-index: 11; font-weight: 800; text-align:center; padding: 24px; }
@@ -23,23 +20,23 @@
     .gate button { padding: 12px 16px; border-radius: 12px; border: none; background: #1a1a1a; color: #fff; font-weight: 800; }
     .preloader{ position:fixed; inset:0; display:grid; place-items:center; background:#000; opacity:.9; color:#fff; z-index:20; font-weight:800; }
     .preloader.hidden{ display:none; }
+    .help { position: fixed; top: 56px; left:50%; transform:translateX(-50%); z-index:10; }
+    .help a { color:#fff; background:#333; padding:8px 12px; border-radius:10px; text-decoration:none; }
   </style>
 
-  <!-- A-Frame (совместимая версия) -->
+  <!-- A-Frame 1.4.2 (совместимо с MindAR 1.1.5) -->
   <script src="https://unpkg.com/aframe@1.4.2/dist/aframe.min.js"></script>
 
-  <!-- MindAR 1.1.5: ВАЖНО соблюдать порядок! -->
+  <!-- MindAR 1.1.5: ПОРЯДОК ВАЖЕН -->
   <script src="https://unpkg.com/mind-ar@1.1.5/dist/mindar-image.prod.js"></script>
   <script src="https://unpkg.com/mind-ar@1.1.5/dist/mindar-image-aframe.prod.js"></script>
 </head>
 <body>
-  <!-- Прелоадер -->
   <div id="preloader" class="preloader">Загружаем AR…</div>
+  <div class="help"><a href="./index-front.html">Если камера не стартует — попробовать «селфи»-камеру</a></div>
 
-  <!-- Подсказки -->
   <div id="hint" class="overlay hidden"></div>
 
-  <!-- UI -->
   <div id="ui" class="ui">
     <button id="btn-help" aria-label="Помощь">?</button>
     <button id="btn-snap" aria-label="Снимок" disabled>📸 Снимок</button>
@@ -47,14 +44,13 @@
     <button id="btn-ticket" aria-label="Билеты" onclick="location.href='ticket.html'">🎟️ Билеты</button>
   </div>
 
-  <!-- Оверлеи -->
   <div id="rotate" class="rotate hidden">Поверните телефон в вертикальный режим</div>
   <div id="ios-gate" class="gate hidden">
     <p>Нажмите, чтобы включить камеру</p>
     <button id="ios-allow">Включить</button>
   </div>
 
-  <!-- Сцена: ОДИН targets.mind с тремя целями -->
+  <!-- ОДИН targets.mind с тремя целями -->
   <a-scene
     renderer="alpha:true; colorManagement:true; physicallyCorrectLights:true; antialias:true"
     embedded
@@ -63,21 +59,17 @@
     mindar-image="imageTargetSrc: ./targets/targets.mind; filterMinCF:0.0002; filterBeta:0.001; warmupTolerance:5"
     loading-screen="enabled:false"
   >
-    <!-- Свет -->
     <a-entity light="type: ambient; intensity: 0.9"></a-entity>
     <a-entity light="type: directional; intensity: 0.8" position="0 1 0"></a-entity>
 
-    <!-- Чебурашка -->
     <a-entity id="tgt-cheb" mindar-image-target="targetIndex: 0">
       <a-entity id="orange-rain" position="0 1 0"></a-entity>
     </a-entity>
 
-    <!-- Шапокляк / Гена -->
     <a-entity id="tgt-shapo" mindar-image-target="targetIndex: 1">
       <a-cone id="lariska-model" radius-bottom="0.12" height="0.25" color="#9c88ff" position="0.1 0.25 0.05"></a-cone>
     </a-entity>
 
-    <!-- Волк -->
     <a-entity id="tgt-volk" mindar-image-target="targetIndex: 2">
       <a-box id="hare-model" depth="0.08" height="0.14" width="0.12" color="#2ecc71" position="0.35 0.08 0.05"></a-box>
       <a-torus-knot id="moped-model" p="2" q="3" radius="0.12" radius-tubular="0.02" color="#e67e22" position="-0.35 0.08 0" visible="false"></a-torus-knot>
@@ -86,46 +78,25 @@
     <a-camera position="0 0 0"></a-camera>
   </a-scene>
 
-  <!-- ЛОГИКА (инлайн) -->
   <script>
     (() => {
       const $ = (sel, root=document) => root.querySelector(sel);
       const rnd = (a,b)=> a + Math.random()*(b-a);
       const buzz = ms => 'vibrate' in navigator && navigator.vibrate(ms);
+      const hint = $('#hint'), pre = $('#preloader'), ui = $('#ui');
+      const showHint = t => { if(hint){ hint.textContent=t; hint.classList.remove('hidden'); } };
+      const hideHint = ()=> hint && hint.classList.add('hidden');
+      const snapBtn = $('#btn-snap'); const enableSnap = ()=> snapBtn && (snapBtn.disabled=false);
 
-      const hint = $('#hint');
-      const pre  = $('#preloader');
-      const ui   = $('#ui');
-
-      const showHint = (text) => { if(hint){ hint.textContent = text; hint.classList.remove('hidden'); } };
-      const hideHint = () => hint && hint.classList.add('hidden');
-
-      const snapBtn = document.getElementById('btn-snap');
-      const enableSnap = () => { if (snapBtn) snapBtn.disabled = false; };
-
-      // iOS гейт (визуальный оверлей)
       const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent);
       const isSafari = /^((?!chrome|android).)*safari/i.test(navigator.userAgent);
-      const gate = $('#ios-gate');
-      if (isIOS && isSafari && gate) gate.classList.remove('hidden');
+      const gate = $('#ios-gate'); if (isIOS && isSafari && gate) gate.classList.remove('hidden');
       $('#ios-allow')?.addEventListener('click', ()=> gate.classList.add('hidden'));
 
-      // Ориентация
       const rotate = $('#rotate');
-      const onResize = () => {
-        if (!rotate) return;
-        const portrait = window.matchMedia('(orientation: portrait)').matches;
-        rotate.classList.toggle('hidden', portrait);
-      };
-      window.addEventListener('resize', onResize); onResize();
+      const onResize = ()=>{ if(!rotate) return; const p=matchMedia('(orientation: portrait)').matches; rotate.classList.toggle('hidden', p); };
+      addEventListener('resize', onResize); onResize();
 
-      // Подсказка по ?s=
-      const s = new URLSearchParams(location.search).get('s');
-      if (s === 'cheb') showHint('Подойдите к скульптуре Чебурашки и наведите камеру');
-      if (s === 'shapo') showHint('Наведите на Шапокляк/Гену — появится Лариска');
-      if (s === 'volk') showHint('Найдите Волка на скамейке — рядом появится Заяц');
-
-      // Сцена и диагностика
       const scene = document.querySelector('a-scene');
       if (scene) {
         scene.addEventListener('loaded', () => { pre && pre.classList.add('hidden'); console.log('[A-Frame] loaded'); });
@@ -133,132 +104,76 @@
         scene.addEventListener('arError', (e) => {
           pre && pre.classList.add('hidden');
           console.error('[MindAR] arError', e?.detail || e);
-          showHint('AR не стартовал. Проверьте HTTPS, разрешение камеры и наличие ./targets/targets.mind');
+          showHint('Не удалось запустить заднюю камеру. Попробуйте закрыть другие приложения с камерой или перейдите на «селфи»-версию.');
         });
-        scene.addEventListener('camera-init', () => console.log('[Camera] camera-init'));
-        scene.addEventListener('camera-error', (e) => console.error('[Camera] camera-error', e?.detail || e));
       }
 
-      // Фолбэк на случай зависания
-      setTimeout(() => {
-        if (!pre.classList.contains('hidden')) {
-          pre.classList.add('hidden');
-          showHint('Если камера не включилась: дайте доступ к камере и перезагрузите страницу');
-        }
-      }, 6000);
+      setTimeout(()=>{ if (!pre.classList.contains('hidden')) { pre.classList.add('hidden'); showHint('Если камера не включилась — попробуйте «селфи»-версию по ссылке выше.'); } }, 6000);
 
-      // Активные цели
       const active = new Set();
       const bindTarget = (el, {onFound, onLost, name, tip}) => {
         if(!el) return;
-        el.addEventListener('targetFound', () => {
-          active.add(el.id);
-          showHint(tip || name);
-          buzz(10);
-          onFound && onFound();
-        });
-        el.addEventListener('targetLost', () => {
-          active.delete(el.id);
-          hideHint();
-          onLost && onLost();
-        });
+        el.addEventListener('targetFound', () => { active.add(el.id); showHint(tip||name); buzz(10); onFound&&onFound(); });
+        el.addEventListener('targetLost', () => { active.delete(el.id); hideHint(); onLost&&onLost(); });
       };
 
-      // ЧЕБУРАШКА — дождь апельсинов
-      const orangeContainer = $('#orange-rain');
-      let rainTimer = null, orangeCount = 0;
-      const ORANGE_CAP = 40;
-
+      const orangeContainer = $('#orange-rain'); let rainTimer=null, orangeCount=0; const ORANGE_CAP=40;
       function spawnOrange(){
-        if (!orangeContainer) return;
-        if (orangeCount >= ORANGE_CAP) return;
-
-        const o = document.createElement('a-sphere');
-        o.setAttribute('radius', rnd(0.04, 0.08));
-        o.setAttribute('material', 'color: orange; metalness:0.05; roughness:0.9');
-
-        const x = rnd(-0.5, 0.5);
-        const y = rnd(0.8, 1.4);
-        const z = rnd(-0.4, 0.4);
+        if (!orangeContainer || orangeCount>=ORANGE_CAP) return;
+        const o=document.createElement('a-sphere');
+        o.setAttribute('radius', rnd(0.04,0.08));
+        o.setAttribute('material','color: orange; metalness:0.05; roughness:0.9');
+        const x=rnd(-0.5,0.5), y=rnd(0.8,1.4), z=rnd(-0.4,0.4);
         o.setAttribute('position', `${x} ${y} ${z}`);
-
-        const dur = Math.floor(rnd(1600, 2600));
+        const dur=Math.floor(rnd(1600,2600));
         o.setAttribute('animation__fall', `property: position; to: ${x} -0.5 0; dur: ${dur}; easing: linear; loop: false`);
-
-        o.addEventListener('animationcomplete__fall', () => {
-          o.remove();
-          orangeCount = Math.max(0, orangeCount - 1);
-        });
-
-        orangeContainer.appendChild(o);
-        orangeCount++;
+        o.addEventListener('animationcomplete__fall', ()=>{ o.remove(); orangeCount=Math.max(0,orangeCount-1); });
+        orangeContainer.appendChild(o); orangeCount++;
       }
 
-      bindTarget($('#tgt-cheb'), {
-        name: 'Чебурашка', tip: 'Чебурашка — ловите апельсинки! 🍊',
-        onFound() { if (!rainTimer) rainTimer = setInterval(spawnOrange, 260); },
-        onLost()  { if (rainTimer) { clearInterval(rainTimer); rainTimer = null; } orangeCount = 0; orangeContainer && (orangeContainer.innerHTML = ''); }
+      bindTarget($('#tgt-cheb'), { name:'Чебурашка', tip:'Чебурашка — ловите апельсинки! 🍊',
+        onFound(){ if(!rainTimer) rainTimer=setInterval(spawnOrange, 260); },
+        onLost(){ if(rainTimer){ clearInterval(rainTimer); rainTimer=null; } orangeCount=0; if(orangeContainer) orangeContainer.innerHTML=''; }
       });
 
-      // Шапокляк — «Лариска машет»
-      const lariska = $('#lariska-model');
-      if (lariska) {
-        lariska.addEventListener('click', () => {
-          lariska.setAttribute('animation__wave','property: rotation; to: 0 45 0; dir: alternate; dur: 350; loop: 4; easing: easeInOutSine');
-          setTimeout(() => lariska.removeAttribute('animation__wave'), 1600);
-        });
-      }
-      bindTarget($('#tgt-shapo'), {
-        name:'Шапокляк', tip:'Лариска рядом — нажми, чтобы помахала 🐭',
-        onFound(){}, onLost(){}
+      const lariska=$('#lariska-model');
+      lariska?.addEventListener('click', ()=> {
+        lariska.setAttribute('animation__wave','property: rotation; to: 0 45 0; dir: alternate; dur: 350; loop: 4; easing: easeInOutSine');
+        setTimeout(()=> lariska.removeAttribute('animation__wave'), 1600);
       });
+      bindTarget($('#tgt-shapo'), { name:'Шапокляк', tip:'Лариска рядом — нажми, чтобы помахала 🐭', onFound(){}, onLost(){} });
 
-      // Волк — заяц + мопед
-      const moped = $('#moped-model');
-      const hare  = $('#hare-model');
-      if (hare) {
-        hare.addEventListener('click', () => {
-          hare.setAttribute('animation__hop','property: position; to: 0.35 0.16 0.05; dir: alternate; dur: 250; loop: 2; easing:easeOutQuad');
-          setTimeout(() => hare.removeAttribute('animation__hop'), 700);
-        });
-      }
-      (document.querySelector('a-scene')||document).addEventListener('click', (e) => {
+      const moped=$('#moped-model'); const hare=$('#hare-model');
+      hare?.addEventListener('click', ()=> {
+        hare.setAttribute('animation__hop','property: position; to: 0.35 0.16 0.05; dir: alternate; dur: 250; loop: 2; easing:easeOutQuad');
+        setTimeout(()=> hare.removeAttribute('animation__hop'), 700);
+      });
+      (document.querySelector('a-scene')||document).addEventListener('click', (e)=> {
         if (ui && ui.contains(e.target)) return;
         if (!moped) return;
         if (!active.has('tgt-volk')) return;
         const vis = moped.getAttribute('visible');
-        moped.setAttribute('visible', !(vis === true || vis === 'true'));
+        moped.setAttribute('visible', !(vis===true || vis==='true'));
       });
 
-      // Селфи
-      document.getElementById('btn-selfie')?.addEventListener('click', ()=> location.href = 'face.html');
-
-      // Снимок
-      document.getElementById('btn-snap')?.addEventListener('click', async () => {
+      document.getElementById('btn-selfie')?.addEventListener('click', ()=> location.href='face.html');
+      document.getElementById('btn-snap')?.addEventListener('click', async ()=> {
         const canvas = document.querySelector('canvas');
-        if (!canvas) return alert('Камера не готова: откройте сайт по HTTPS и разрешите доступ к камере.');
+        if (!canvas) return alert('Камера не готова: разрешите доступ и перезагрузите страницу.');
         const dataURL = canvas.toDataURL('image/jpeg', 0.95);
         try {
           const blob = await (await fetch(dataURL)).blob();
           const file = new File([blob], 'souzmult-ar.jpg', { type: 'image/jpeg' });
-          if (navigator.canShare?.({ files: [file] })) {
-            await navigator.share({ files: [file], title: 'AR фото' });
-            return;
-          }
+          if (navigator.canShare?.({ files: [file] })) { await navigator.share({ files: [file], title: 'AR фото' }); return; }
         } catch {}
-        const a = document.createElement('a'); a.href = dataURL; a.download = 'souzmult-ar.jpg'; a.click();
+        const a=document.createElement('a'); a.href=dataURL; a.download='souzmult-ar.jpg'; a.click();
       });
 
-      // «?»
-      document.getElementById('btn-help')?.addEventListener('click', () => {
-        alert(
-`Наведите камеру на фото скульптуры (Чебурашка / Шапокляк–Гена / Волк).
-
-Чебурашка: дождь апельсинов.
-Шапокляк: Лариска машет.
-Волк: Заяц дразнит, мопед включается по нажатию.
-
-📸 — снимок, 🤳 — селфи.`);
+      document.getElementById('btn-help')?.addEventListener('click', ()=> {
+        alert(`Если камера не стартует: 
+• Закройте приложения/вкладки, которые используют камеру
+• Дайте сайту доступ к камере
+• Попробуйте «селфи»-версию по ссылке выше`);
       });
     })();
   </script>
