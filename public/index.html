@@ -80,4 +80,121 @@
       const $ = s => document.querySelector(s);
       const scene = document.querySelector('a-scene');
       const getMIS = () => scene?.systems?.['mindar-image-system'];
-      const pre = $('#pre'), gate =
+      const pre = $('#pre'), gate = $('#gate'), hint = $('#hint'), ui = $('#ui');
+
+      const showHint = t => { hint.textContent = t; hint.classList.remove('hidden'); };
+      const hideHint = () => hint.classList.add('hidden');
+      const enableSnap = () => { $('#btn-snap').disabled = false; };
+
+      // Ждём полной инициализации системы MindAR
+      async function waitMindAR(timeout = 8000) {
+        const t0 = performance.now();
+        while (!getMIS()) {
+          await new Promise(r => setTimeout(r, 50));
+          if (performance.now() - t0 > timeout) break;
+        }
+        return getMIS();
+      }
+
+      scene.addEventListener('loaded', () => console.log('[A-Frame] loaded'));
+      scene.addEventListener('arReady', () => { pre.classList.add('hidden'); enableSnap(); console.log('[MindAR] arReady'); });
+      scene.addEventListener('arError', (e) => {
+        pre.classList.add('hidden');
+        console.error('[MindAR] arError', e?.detail || e);
+        showHint('Не удалось запустить камеру. Попробуйте другой режим или закройте приложения с камерой.');
+        if (!document.body.contains(gate)) document.body.appendChild(gate);
+      });
+      scene.addEventListener('camera-init', () => console.log('[Camera] camera-init'));
+      scene.addEventListener('camera-error', (e) => console.error('[Camera] camera-error', e?.detail || e));
+
+      async function startAR(facingMode){
+        hideHint();
+        pre.classList.remove('hidden');
+
+        const mis = await waitMindAR();
+        if (!mis) {
+          pre.classList.add('hidden');
+          showHint('AR-ядро не загрузилось. Обновите страницу.');
+          if (!document.body.contains(gate)) document.body.appendChild(gate);
+          return;
+        }
+
+        try { await mis.stop?.(); } catch {}
+
+        try {
+          await mis.start?.({ facingMode });
+
+          // Через 2.5с проверяем, привязалось ли видео к текстуре
+          setTimeout(() => {
+            const v = mis.video || mis._video;
+            const w = v?.videoWidth||0, h = v?.videoHeight||0;
+            console.log('[MindAR video]', w, h, 'mode=', facingMode);
+            if (w === 0 || h === 0) {
+              console.warn('Video is 0x0 — retry with alternate camera');
+              mis.stop?.();
+              const alt = facingMode === 'environment' ? 'user' : 'environment';
+              startAR(alt);
+            }
+          }, 2500);
+        } catch (err) {
+          console.error('mis.start failed', err);
+          pre.classList.add('hidden');
+          showHint('Старт камеры не удался. Попробуйте другой режим или перезагрузите устройство.');
+          if (!document.body.contains(gate)) document.body.appendChild(gate);
+        }
+      }
+
+      $('#start-back').addEventListener('click', () => { gate.remove(); startAR('environment'); });
+      $('#start-front').addEventListener('click', () => { gate.remove(); startAR('user'); });
+
+      // UI
+      $('#btn-help').addEventListener('click', () => {
+        alert('Если висит «Загружаем AR…»: нажмите «Фронтальная» или «Задняя», закройте другие приложения/вкладки с камерой и попробуйте снова.');
+      });
+      $('#btn-snap').addEventListener('click', async () => {
+        const c = document.querySelector('canvas'); if (!c) return alert('Камера ещё не готова');
+        const url = c.toDataURL('image/jpeg', 0.95);
+        try {
+          const blob = await (await fetch(url)).blob();
+          const file = new File([blob], 'souzmult-ar.jpg', {type:'image/jpeg'});
+          if (navigator.canShare?.({files:[file]})) { await navigator.share({files:[file], title:'AR фото'}); return; }
+        } catch {}
+        const a=document.createElement('a'); a.href=url; a.download='souzmult-ar.jpg'; a.click();
+      });
+
+      // Контент
+      const rnd=(a,b)=>a+Math.random()*(b-a);
+      const orangeContainer=$('#orange-rain'); let rainTimer=null, count=0; const CAP=40;
+      function spawnOrange(){
+        if(!orangeContainer || count>=CAP) return;
+        const o=document.createElement('a-sphere');
+        o.setAttribute('radius', rnd(0.04,0.08));
+        o.setAttribute('material','color: orange; metalness:0.05; roughness:0.9');
+        const x=rnd(-0.5,0.5), y=rnd(0.8,1.4), z=rnd(-0.4,0.4);
+        o.setAttribute('position', `${x} ${y} ${z}`);
+        const dur=Math.floor(rnd(1600,2600));
+        o.setAttribute('animation__fall', `property: position; to: ${x} -0.5 0; dur: ${dur}; easing: linear; loop: false`);
+        o.addEventListener('animationcomplete__fall', ()=>{ o.remove(); count=Math.max(0,count-1); });
+        orangeContainer.appendChild(o); count++;
+      }
+      const bind=(id, {tip,onFound,onLost})=>{
+        const el=document.getElementById(id); if(!el) return;
+        el.addEventListener('targetFound', ()=>{ hint.textContent=tip; hint.classList.remove('hidden'); onFound&&onFound(); });
+        el.addEventListener('targetLost',  ()=>{ hint.classList.add('hidden'); onLost&&onLost(); });
+      };
+      bind('tgt-cheb',{ tip:'Чебурашка — ловите апельсинки! 🍊',
+        onFound(){ if(!rainTimer) rainTimer=setInterval(spawnOrange,260); },
+        onLost(){ if(rainTimer){ clearInterval(rainTimer); rainTimer=null; } count=0; if(orangeContainer) orangeContainer.innerHTML=''; }
+      });
+      const lariska=$('#lariska-model');
+      lariska?.addEventListener('click', ()=>{ lariska.setAttribute('animation__wave','property: rotation; to: 0 45 0; dir: alternate; dur: 350; loop: 4; easing: easeInOutSine'); setTimeout(()=> lariska.removeAttribute('animation__wave'), 1600); });
+      bind('tgt-shapo',{ tip:'Лариска рядом — нажми, чтобы помахала 🐭', onFound(){}, onLost(){} });
+      const moped=$('#moped-model'), hare=$('#hare-model'); let volkActive=false;
+      $('#tgt-volk').addEventListener('targetFound', ()=> volkActive=true);
+      $('#tgt-volk').addEventListener('targetLost',  ()=> volkActive=false);
+      hare?.addEventListener('click', ()=>{ hare.setAttribute('animation__hop','property: position; to: 0.35 0.16 0.05; dir: alternate; dur: 250; loop: 2; easing:easeOutQuad'); setTimeout(()=> hare.removeAttribute('animation__hop'), 700); });
+      scene.addEventListener('click', (e)=>{ if (ui.contains(e.target)) return; if (!moped || !volkActive) return; const vis=moped.getAttribute('visible'); moped.setAttribute('visible', !(vis===true || vis==='true')); });
+    })();
+  </script>
+</body>
+</html>
