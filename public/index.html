@@ -21,17 +21,20 @@
     .gate .row { display:flex; gap:12px; justify-content:center; margin-top:10px; }
     .gate button { padding: 12px 16px; border-radius: 12px; border: none; background: #1a1a1a; color: #fff; font-weight: 800; }
     .gate small { display:block; opacity:.8; margin-top:10px; }
+
+    /* отладочный сырой видео-поток (включаем по необходимости) */
+    #rawvideo { position:fixed; inset:0; object-fit:cover; z-index:5; display:none; }
   </style>
 
-  <!-- A-Frame 1.4.2 (стабильно с MindAR 1.1.5) -->
+  <!-- A-Frame 1.4.2 (совместимо с MindAR 1.1.5) -->
   <script src="https://unpkg.com/aframe@1.4.2/dist/aframe.min.js"></script>
 
-  <!-- MindAR 1.1.5: ВАЖЕН ПОРЯДОК -->
+  <!-- MindAR 1.1.5: ПОРЯДОК ВАЖЕН -->
   <script src="https://unpkg.com/mind-ar@1.1.5/dist/mindar-image.prod.js"></script>
   <script src="https://unpkg.com/mind-ar@1.1.5/dist/mindar-image-aframe.prod.js"></script>
 </head>
 <body>
-  <!-- Оверлей старта: запускаем по клику с выбором камеры -->
+  <!-- старт-оверлей: ручной запуск с выбором камеры -->
   <div id="start-gate" class="gate">
     <div>
       <h2>Включить камеру</h2>
@@ -39,22 +42,21 @@
         <button id="btn-start-back">Задняя</button>
         <button id="btn-start-front">Фронтальная</button>
       </div>
-      <small>Если браузер спросит — разрешите доступ к камере. Если не сработает, закройте другие приложения/вкладки с камерой и попробуйте ещё раз.</small>
+      <small>Если браузер спросит — разрешите доступ. Если видите чёрный экран — попробуйте другой режим или закройте приложения, которые используют камеру.</small>
     </div>
   </div>
 
-  <!-- Прелоадер и подсказки -->
+  <video id="rawvideo" playsinline muted></video>
   <div id="preloader" class="preloader hidden">Загружаем AR…</div>
   <div id="hint" class="overlay hidden"></div>
 
-  <!-- Кнопки -->
   <div id="ui" class="ui">
     <button id="btn-help" aria-label="Помощь">?</button>
     <button id="btn-snap" aria-label="Снимок" disabled>📸 Снимок</button>
     <button id="btn-ticket" aria-label="Билеты" onclick="location.href='ticket.html'">🎟️ Билеты</button>
   </div>
 
-  <!-- Сцена: ОДИН targets.mind, автостарт выключен -->
+  <!-- один targets.mind, автостарт выкл -->
   <a-scene
     renderer="alpha:true; colorManagement:true; physicallyCorrectLights:true; antialias:true"
     embedded
@@ -66,17 +68,14 @@
     <a-entity light="type: ambient; intensity: 0.9"></a-entity>
     <a-entity light="type: directional; intensity: 0.8" position="0 1 0"></a-entity>
 
-    <!-- Чебурашка -->
     <a-entity id="tgt-cheb" mindar-image-target="targetIndex: 0">
       <a-entity id="orange-rain" position="0 1 0"></a-entity>
     </a-entity>
 
-    <!-- Шапокляк / Гена -->
     <a-entity id="tgt-shapo" mindar-image-target="targetIndex: 1">
       <a-cone id="lariska-model" radius-bottom="0.12" height="0.25" color="#9c88ff" position="0.1 0.25 0.05"></a-cone>
     </a-entity>
 
-    <!-- Волк -->
     <a-entity id="tgt-volk" mindar-image-target="targetIndex: 2">
       <a-box id="hare-model" depth="0.08" height="0.14" width="0.12" color="#2ecc71" position="0.35 0.08 0.05"></a-box>
       <a-torus-knot id="moped-model" p="2" q="3" radius="0.12" radius-tubular="0.02" color="#e67e22" position="-0.35 0.08 0" visible="false"></a-torus-knot>
@@ -88,38 +87,62 @@
   <script>
     (() => {
       const $ = s => document.querySelector(s);
-      const pre = $('#preloader'), hint = $('#hint'), ui = $('#ui'), gate = $('#start-gate');
-      const scene = document.querySelector('a-scene');
-      const mis = () => scene.systems['mindar-image-system'];
-
-      const showHint=t=>{hint.textContent=t; hint.classList.remove('hidden');};
-      const hideHint=()=>hint.classList.add('hidden');
+      const pre = $('#preloader'), hint = $('#hint'), gate = $('#start-gate'), scene = document.querySelector('a-scene');
+      const showHint=t=>{hint.textContent=t; hint.classList.remove('hidden');}; const hideHint=()=>hint.classList.add('hidden');
       const enableSnap=()=>{ const b=$('#btn-snap'); if(b) b.disabled=false; };
 
+      const mis = () => scene.systems['mindar-image-system'];
       scene.addEventListener('loaded', ()=> console.log('[A-Frame] loaded'));
       scene.addEventListener('arReady', ()=>{ pre.classList.add('hidden'); enableSnap(); console.log('[MindAR] arReady'); });
-      scene.addEventListener('arError', (e)=>{
-        pre.classList.add('hidden');
-        console.error('[MindAR] arError', e?.detail || e);
-        showHint('Не удалось запустить камеру. Закройте другие приложения/вкладки с камерой или попробуйте другой режим.');
-        // Показать гейт повторно, чтобы можно было выбрать другую камеру
-        if (!document.body.contains(gate)) document.body.appendChild(gate); 
-      });
-      scene.addEventListener('camera-error', (e)=> console.error('[Camera] camera-error', e?.detail || e));
-      scene.addEventListener('camera-init', ()=> console.log('[Camera] camera-init'));
+      scene.addEventListener('arError', (e)=>{ pre.classList.add('hidden'); console.error('[MindAR] arError', e?.detail||e); showHint('Камера не стартовала. Попробуйте другой режим выше.'); if(!document.body.contains(gate)) document.body.appendChild(gate); });
 
-      async function startAR(facingMode){
-        hideHint();
-        pre.classList.remove('hidden');
-        try { await mis().stop?.(); } catch {}
+      // 1) префлайт: проверяем, что getUserMedia реально даёт поток, и показываем сырой <video> (для отладки)
+      async function probeAndPreview(facingMode) {
         try {
-          // MindAR 1.1.5 понимает facingMode в опциях start()
+          const stream = await navigator.mediaDevices.getUserMedia({video:{facingMode, width:{ideal:1280}, height:{ideal:720}}});
+          const v = $('#rawvideo'); v.srcObject = stream; await v.play();
+          // покажем сырое видео на 1.5с, чтобы убедиться, что камера даёт картинку
+          v.style.display = 'block'; setTimeout(()=>{ v.style.display='none'; stream.getTracks().forEach(t=>t.stop()); v.srcObject=null; }, 1500);
+          return true;
+        } catch(e) {
+          console.warn('probe fail', facingMode, e.name, e.message);
+          return e;
+        }
+      }
+
+      // 2) запуск MindAR + авто-ретраи и «показ сырого видео», если по-прежнему чёрный экран
+      async function startAR(facingMode){
+        hideHint(); pre.classList.remove('hidden');
+        // префлайт — если даже gUM падает, мне смысла стартовать MindAR нет
+        const probe = await probeAndPreview(facingMode);
+        if (probe !== true) {
+          pre.classList.add('hidden');
+          showHint(`Камера (${facingMode}) не запустилась: ${probe.name||'Error'}. Попробуйте другой режим.`);
+          if(!document.body.contains(gate)) document.body.appendChild(gate);
+          return;
+        }
+        try {
+          await mis().stop?.();
+        } catch {}
+        try {
           await mis().start({ facingMode });
+          // через 3с проверим, пришло ли видео в MindAR; если нет — авто-переключимся
+          setTimeout(()=> {
+            const v = mis().video || mis()._video;
+            const w = v?.videoWidth||0, h=v?.videoHeight||0;
+            console.log('[MindAR video size]', w, h);
+            if (w===0 || h===0) {
+              console.warn('MindAR video is 0x0 — retry with alternate camera');
+              mis().stop?.();
+              const alt = (facingMode==='environment')?'user':'environment';
+              startAR(alt);
+            }
+          }, 3000);
         } catch (err) {
           console.error('start() failed', err);
           pre.classList.add('hidden');
-          showHint('Старт камеры не удался. Попробуйте другой режим или перезагрузите устройство.');
-          if (!document.body.contains(gate)) document.body.appendChild(gate);
+          showHint('Старт не удался. Попробуйте другой режим или перезагрузите устройство.');
+          if(!document.body.contains(gate)) document.body.appendChild(gate);
         }
       }
 
@@ -128,8 +151,10 @@
 
       // UI
       $('#btn-help').addEventListener('click', ()=>{
-        alert('Если видите чёрный экран: 1) закройте приложения/вкладки, которые используют камеру, 2) выберите другой режим (фронт/тыл), 3) дайте сайту доступ к камере в настройках браузера.');
+        alert('Если чёрный экран: 1) закройте другие приложения/вкладки с камерой, 2) попробуйте другой режим (задняя/фронтальная), 3) перезагрузите устройство.');
       });
+
+      // Снимок
       $('#btn-snap').addEventListener('click', async ()=>{
         const c = document.querySelector('canvas');
         if(!c){ alert('Камера ещё не готова'); return; }
@@ -142,49 +167,31 @@
         const a=document.createElement('a'); a.href=url; a.download='souzmult-ar.jpg'; a.click();
       });
 
-      // Контент
+      // Контент (анимации)
       const rnd=(a,b)=> a+Math.random()*(b-a);
-      const orangeContainer=$('#orange-rain'); let rainTimer=null, count=0; const CAP=40;
-      function spawnOrange(){
-        if(!orangeContainer || count>=CAP) return;
-        const o=document.createElement('a-sphere');
-        o.setAttribute('radius', rnd(0.04,0.08));
-        o.setAttribute('material','color: orange; metalness:0.05; roughness:0.9');
-        const x=rnd(-0.5,0.5), y=rnd(0.8,1.4), z=rnd(-0.4,0.4);
-        o.setAttribute('position', `${x} ${y} ${z}`);
-        const dur=Math.floor(rnd(1600,2600));
-        o.setAttribute('animation__fall', `property: position; to: ${x} -0.5 0; dur: ${dur}; easing: linear; loop: false`);
-        o.addEventListener('animationcomplete__fall', ()=>{ o.remove(); count=Math.max(0,count-1); });
-        orangeContainer.appendChild(o); count++;
+      const orangeContainer=document.getElementById('orange-rain'); let rainTimer=null, count=0; const CAP=40;
+      function spawnOrange(){ if(!orangeContainer||count>=CAP) return;
+        const o=document.createElement('a-sphere'); o.setAttribute('radius', rnd(0.04,0.08)); o.setAttribute('material','color: orange; metalness:0.05; roughness:0.9');
+        const x=rnd(-0.5,0.5), y=rnd(0.8,1.4), z=rnd(-0.4,0.4); o.setAttribute('position', `${x} ${y} ${z}`);
+        const dur=Math.floor(rnd(1600,2600)); o.setAttribute('animation__fall', `property: position; to: ${x} -0.5 0; dur: ${dur}; easing: linear; loop: false`);
+        o.addEventListener('animationcomplete__fall', ()=>{ o.remove(); count=Math.max(0,count-1); }); orangeContainer.appendChild(o); count++;
       }
-      function bind(id, {tip,onFound,onLost}){
-        const el = document.getElementById(id);
+      function bind(id, {tip,onFound,onLost}){ const el=document.getElementById(id); if(!el) return;
         el.addEventListener('targetFound', ()=>{ showHint(tip); onFound&&onFound(); });
-        el.addEventListener('targetLost',  ()=>{ hideHint(); onLost&&onLost();  });
+        el.addEventListener('targetLost',  ()=>{ hideHint(); onLost&&onLost(); });
       }
-      bind('tgt-cheb', { tip:'Чебурашка — ловите апельсинки! 🍊',
+      bind('tgt-cheb',{ tip:'Чебурашка — ловите апельсинки! 🍊',
         onFound(){ if(!rainTimer) rainTimer=setInterval(spawnOrange,260); },
-        onLost(){ clearInterval(rainTimer); rainTimer=null; count=0; if(orangeContainer) orangeContainer.innerHTML=''; }
+        onLost(){ if(rainTimer){ clearInterval(rainTimer); rainTimer=null; } count=0; if(orangeContainer) orangeContainer.innerHTML=''; }
       });
       const lariska=document.getElementById('lariska-model');
-      lariska?.addEventListener('click', ()=>{
-        lariska.setAttribute('animation__wave','property: rotation; to: 0 45 0; dir: alternate; dur: 350; loop: 4; easing: easeInOutSine');
-        setTimeout(()=> lariska.removeAttribute('animation__wave'), 1600);
-      });
+      lariska?.addEventListener('click', ()=>{ lariska.setAttribute('animation__wave','property: rotation; to: 0 45 0; dir: alternate; dur: 350; loop: 4; easing: easeInOutSine'); setTimeout(()=> lariska.removeAttribute('animation__wave'), 1600); });
       bind('tgt-shapo',{ tip:'Лариска рядом — нажми, чтобы помахала 🐭', onFound(){}, onLost(){} });
       const moped=document.getElementById('moped-model'), hare=document.getElementById('hare-model'); let volkActive=false;
       document.getElementById('tgt-volk').addEventListener('targetFound', ()=> volkActive=true);
       document.getElementById('tgt-volk').addEventListener('targetLost',  ()=> volkActive=false);
-      hare?.addEventListener('click', ()=>{
-        hare.setAttribute('animation__hop','property: position; to: 0.35 0.16 0.05; dir: alternate; dur: 250; loop: 2; easing:easeOutQuad');
-        setTimeout(()=> hare.removeAttribute('animation__hop'), 700);
-      });
-      scene.addEventListener('click', (e)=>{
-        if (ui.contains(e.target)) return;
-        if (!moped || !volkActive) return;
-        const vis = moped.getAttribute('visible');
-        moped.setAttribute('visible', !(vis===true || vis==='true'));
-      });
+      hare?.addEventListener('click', ()=>{ hare.setAttribute('animation__hop','property: position; to: 0.35 0.16 0.05; dir: alternate; dur: 250; loop: 2; easing:easeOutQuad'); setTimeout(()=> hare.removeAttribute('animation__hop'), 700); });
+      scene.addEventListener('click', (e)=>{ const ui=document.getElementById('ui'); if (ui.contains(e.target)) return; if (!moped || !volkActive) return; const vis = moped.getAttribute('visible'); moped.setAttribute('visible', !(vis===true || vis==='true')); });
     })();
   </script>
 </body>
