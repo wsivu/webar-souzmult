@@ -265,3 +265,74 @@
 
       // Волк — заяц подпрыгивает, мопед включается по клику
       function makeVolkAnchor(idx){
+        const a = document.createElement('a-entity');
+        a.setAttribute('id', `a-volk-${idx}`);
+        a.setAttribute('mindar-image-target', `targetIndex: ${idx}`);
+
+        const hare = document.createElement('a-box');
+        hare.setAttribute('id', `hare-${idx}`);
+        hare.setAttribute('width','0.12'); hare.setAttribute('height','0.14'); hare.setAttribute('depth','0.08');
+        hare.setAttribute('color','#2ecc71'); hare.setAttribute('position','0.35 0.08 0.05');
+
+        const moped = document.createElement('a-torus-knot');
+        moped.setAttribute('id', `moped-${idx}`);
+        moped.setAttribute('p','2'); moped.setAttribute('q','3');
+        moped.setAttribute('radius','0.12'); moped.setAttribute('radius-tubular','0.02');
+        moped.setAttribute('color','#e67e22'); moped.setAttribute('position','-0.35 0.08 0'); moped.setAttribute('visible','false');
+
+        a.appendChild(hare); a.appendChild(moped);
+        anchorsRoot.appendChild(a);
+
+        let active=false;
+        a.addEventListener('targetFound', ()=> active=true);
+        a.addEventListener('targetLost',  ()=> { active=false; moped.setAttribute('visible', false); });
+
+        hare.addEventListener('click', ()=>{
+          hare.setAttribute('animation__hop','property: position; to: 0.35 0.16 0.05; dir: alternate; dur: 250; loop: 2; easing:easeOutQuad');
+          setTimeout(()=> hare.removeAttribute('animation__hop'), 700);
+        });
+
+        scene.addEventListener('click', (e)=>{
+          if (ui.contains(e.target)) return;
+          if (!active) return;
+          const vis = moped.getAttribute('visible');
+          moped.setAttribute('visible', !(vis===true || vis==='true'));
+        });
+
+        bindTarget(a, { tip:'Волк здесь — заяц дразнит, мопед по клику 🛵' });
+      }
+
+      // Проброс подсказок
+      function bindTarget(el, {tip, onFound, onLost}) {
+        if (!el) return;
+        el.addEventListener('targetFound', () => { showHint(tip); onFound && onFound(); });
+        el.addEventListener('targetLost',  () => { hideHint(); onLost  && onLost();  });
+      }
+
+      // Генерация всех якорей
+      expandIdx(groups.shapo).forEach(makeShapoAnchor);
+      expandIdx(groups.cheb ).forEach(makeChebAnchor);
+      expandIdx(groups.gena ).forEach(makeGenaAnchor);
+      expandIdx(groups.volk ).forEach(makeVolkAnchor);
+
+      // UI
+      $('#btn-help').addEventListener('click', () => {
+        alert('Наведи камеру на скульптуру:\n• Шапокляк (индексы 1–3) — Лариска машет\n• Чебурашка (4–5) — дождь апельсинов\n• Гена (6–7) — летят нотки\n• Волк (8–11) — заяц подпрыгивает, мопед включается по нажатию');
+      });
+      $('#btn-snap').addEventListener('click', async () => {
+        const c = document.querySelector('canvas'); if (!c) return alert('Камера ещё не готова');
+        const url = c.toDataURL('image/jpeg', 0.95);
+        try {
+          const blob = await (await fetch(url)).blob();
+          const file = new File([blob], 'souzmult-ar.jpg', {type:'image/jpeg'});
+          if (navigator.canShare?.({files:[file]})) { await navigator.share({files:[file], title:'AR фото'}); return; }
+        } catch {}
+        const a=document.createElement('a'); a.href=url; a.download='souzmult-ar.jpg'; a.click();
+      });
+
+      // На всякий случай: убрать лоадеры ещё раз через 2с
+      setTimeout(nukeOverlays, 2000);
+    })();
+  </script>
+</body>
+</html>
