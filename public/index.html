@@ -9,7 +9,6 @@
 
   <style>
     html,body{margin:0;padding:0;height:100%;overflow:hidden;background:transparent;font-family:system-ui,-apple-system,Arial}
-    /* UI */
     .ui{position:fixed;left:0;right:0;bottom:16px;display:flex;gap:10px;justify-content:center;z-index:10}
     .ui button{padding:10px 14px;border:none;border-radius:12px;background:rgba(0,0,0,.6);color:#fff;font-weight:600;backdrop-filter:blur(6px)}
     .overlay{position:fixed;top:12px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.55);color:#fff;padding:10px 14px;border-radius:12px;z-index:10;font-weight:700}
@@ -18,10 +17,8 @@
     .gate{position:fixed;inset:0;display:grid;place-items:center;background:rgba(0,0,0,.86);color:#fff;z-index:25;text-align:center;padding:24px}
     .gate .row{display:flex;gap:12px;justify-content:center;margin-top:10px}
     .gate button{padding:12px 16px;border:none;border-radius:12px;background:#1a1a1a;color:#fff;font-weight:800}
-    /* сцена и канвас – поверх видео */
     a-scene, a-scene canvas { position:fixed; inset:0; }
     a-scene canvas { z-index:1; background:transparent !important; }
-    /* глушим MindAR UI */
     .mindar-ui-overlay,.mindar-ui-scanning,.mindar-ui-loading{display:none !important;opacity:0 !important;visibility:hidden !important}
   </style>
 
@@ -54,7 +51,6 @@
     <button id="btn-ticket" onclick="location.href='ticket.html'">🎟️ Билеты</button>
   </div>
 
-  <!-- Сцена: автостарт выкл, MindAR UI выкл -->
   <a-scene
     renderer="alpha:true; physicallyCorrectLights:true; antialias:true"
     embedded
@@ -68,8 +64,30 @@
     <a-entity light="type: ambient; intensity: 0.9"></a-entity>
     <a-entity light="type: directional; intensity: 0.8" position="0 1 0"></a-entity>
 
-    <!-- сюда программно добавим якоря -->
-    <a-entity id="anchors"></a-entity>
+    <!-- === Шапокляк: индексы 0,1,2 (твои 1–3) === -->
+    <a-entity id="shapo-0" mindar-image-target="targetIndex: 0">
+      <a-cone class="lariska" radius-bottom="0.12" height="0.25" color="#9c88ff" position="0.1 0.25 0.05"></a-cone>
+    </a-entity>
+    <a-entity id="shapo-1" mindar-image-target="targetIndex: 1">
+      <a-cone class="lariska" radius-bottom="0.12" height="0.25" color="#9c88ff" position="0.1 0.25 0.05"></a-cone>
+    </a-entity>
+    <a-entity id="shapo-2" mindar-image-target="targetIndex: 2">
+      <a-cone class="lariska" radius-bottom="0.12" height="0.25" color="#9c88ff" position="0.1 0.25 0.05"></a-cone>
+    </a-entity>
+
+    <!-- === Чебурашка: индексы 3–4 (твои 4–5) === -->
+    <a-entity id="cheb-3" mindar-image-target="targetIndex: 3"><a-entity class="orange-rain" position="0 1 0"></a-entity></a-entity>
+    <a-entity id="cheb-4" mindar-image-target="targetIndex: 4"><a-entity class="orange-rain" position="0 1 0"></a-entity></a-entity>
+
+    <!-- === Гена: индексы 5–6 (твои 6–7) === -->
+    <a-entity id="gena-5" mindar-image-target="targetIndex: 5"><a-entity class="notes"></a-entity></a-entity>
+    <a-entity id="gena-6" mindar-image-target="targetIndex: 6"><a-entity class="notes"></a-entity></a-entity>
+
+    <!-- === Волк: индексы 7–10 (твои 8–11) === -->
+    <a-entity id="volk-7"  mindar-image-target="targetIndex: 7"><a-box class="hare" width="0.12" height="0.14" depth="0.08" color="#2ecc71" position="0.35 0.08 0.05"></a-box><a-torus-knot class="moped" p="2" q="3" radius="0.12" radius-tubular="0.02" color="#e67e22" position="-0.35 0.08 0" visible="false"></a-torus-knot></a-entity>
+    <a-entity id="volk-8"  mindar-image-target="targetIndex: 8"><a-box class="hare" width="0.12" height="0.14" depth="0.08" color="#2ecc71" position="0.35 0.08 0.05"></a-box><a-torus-knot class="moped" p="2" q="3" radius="0.12" radius-tubular="0.02" color="#e67e22" position="-0.35 0.08 0" visible="false"></a-torus-knot></a-entity>
+    <a-entity id="volk-9"  mindar-image-target="targetIndex: 9"><a-box class="hare" width="0.12" height="0.14" depth="0.08" color="#2ecc71" position="0.35 0.08 0.05"></a-box><a-torus-knot class="moped" p="2" q="3" radius="0.12" radius-tubular="0.02" color="#e67e22" position="-0.35 0.08 0" visible="false"></a-torus-knot></a-entity>
+    <a-entity id="volk-10" mindar-image-target="targetIndex:10"><a-box class="hare" width="0.12" height="0.14" depth="0.08" color="#2ecc71" position="0.35 0.08 0.05"></a-box><a-torus-knot class="moped" p="2" q="3" radius="0.12" radius-tubular="0.02" color="#e67e22" position="-0.35 0.08 0" visible="false"></a-torus-knot></a-entity>
 
     <a-camera position="0 0 0"></a-camera>
   </a-scene>
@@ -77,8 +95,8 @@
   <script>
     (() => {
       const $ = s => document.querySelector(s);
+      const $$ = s => Array.from(document.querySelectorAll(s));
       const scene = document.querySelector('a-scene');
-      const anchorsRoot = $('#anchors');
       const getMIS = () => scene?.systems?.['mindar-image-system'];
       const gate = $('#gate'), hint = $('#hint'), ui = $('#ui');
 
@@ -98,7 +116,6 @@
       }
 
       scene.addEventListener('loaded', () => console.log('[A-Frame] loaded'));
-
       scene.addEventListener('arReady', () => {
         const mis = getMIS();
         const v = mis?.video || mis?._video;
@@ -107,11 +124,9 @@
           Object.assign(v.style, {position:'fixed', inset:'0', objectFit:'cover', zIndex:'0', display:'block'});
           try { v.play?.(); } catch {}
         }
-        enableSnap();
-        nukeOverlays();
+        enableSnap(); nukeOverlays();
         console.log('[MindAR] arReady (video layered)');
       });
-
       scene.addEventListener('arError', (e) => {
         nukeOverlays();
         console.error('[MindAR] arError', e?.detail || e);
@@ -120,17 +135,9 @@
       });
 
       async function startAR(facingMode){
-        hideHint();
-        $('#pre')?.classList.remove('hidden');
-
+        hideHint(); $('#pre')?.classList.remove('hidden');
         const mis = await waitMindAR();
-        if (!mis) {
-          nukeOverlays();
-          showHint('AR-ядро не загрузилось. Обновите страницу.');
-          if (!document.body.contains(gate)) document.body.appendChild(gate);
-          return;
-        }
-
+        if (!mis) { nukeOverlays(); showHint('AR-ядро не загрузилось. Обновите страницу.'); if (!document.body.contains(gate)) document.body.appendChild(gate); return; }
         try { await mis.stop?.(); } catch {}
         try {
           await mis.start?.({ facingMode });
@@ -139,12 +146,6 @@
             const w = v?.videoWidth||0, h = v?.videoHeight||0;
             console.log('[MindAR video]', w, h, 'mode=', facingMode);
             nukeOverlays();
-            if (w === 0 || h === 0) {
-              console.warn('Video is 0x0 — retry with alternate camera');
-              mis.stop?.();
-              const alt = facingMode === 'environment' ? 'user' : 'environment';
-              startAR(alt);
-            }
           }, 2000);
         } catch (err) {
           console.error('mis.start failed', err);
@@ -158,60 +159,22 @@
       $('#start-back').addEventListener('click', () => { gate.remove(); startAR('environment'); });
       $('#start-front').addEventListener('click', () => { gate.remove(); startAR('user'); });
 
-      // =======================
-      //   МНОГО ТАРГЕТОВ ПО ГРУППАМ
-      // =======================
-      // Твоё соответствие:
-      // 1–3: Шапокляк | 4–5: Чебурашка | 6–7: Гена | 8–11: Волк
-      // Чтобы покрыть возможную 0-индексацию, также добавляем (i-1) для каждого.
-      const groups = {
-        shapo: [1,2,3],
-        cheb:  [4,5],
-        gena:  [6,7],
-        volk:  [8,9,10,11],
-      };
-      const expandIdx = arr => {
-        const s = new Set();
-        arr.forEach(i => { if (i>=0) s.add(i); if (i-1>=0) s.add(i-1); });
-        return [...s].sort((a,b)=>a-b);
-      };
+      // ==== ПОВЕДЕНИЕ ДЛЯ ГРУПП ====
 
-      // Функции создания якорей
-      const rnd=(a,b)=>a+Math.random()*(b-a);
-
-      function makeShapoAnchor(idx){
-        const a = document.createElement('a-entity');
-        a.setAttribute('id', `a-shapo-${idx}`);
-        a.setAttribute('mindar-image-target', `targetIndex: ${idx}`);
-        const lariska = document.createElement('a-cone');
-        lariska.setAttribute('id', `lariska-${idx}`);
-        lariska.setAttribute('radius-bottom', '0.12');
-        lariska.setAttribute('height', '0.25');
-        lariska.setAttribute('color', '#9c88ff');
-        lariska.setAttribute('position', '0.1 0.25 0.05');
-        a.appendChild(lariska);
-        anchorsRoot.appendChild(a);
-
-        // поведение
-        lariska.addEventListener('click', ()=>{
+      // Шапокляк → Лариска машет
+      $$('#shapo-0, #shapo-1, #shapo-2').forEach(anchor=>{
+        const lariska = anchor.querySelector('.lariska');
+        lariska?.addEventListener('click', ()=>{
           lariska.setAttribute('animation__wave','property: rotation; to: 0 45 0; dir: alternate; dur: 350; loop: 4; easing: easeInOutSine');
           setTimeout(()=> lariska.removeAttribute('animation__wave'), 1600);
         });
-        bindTarget(a, {tip:'Лариска рядом — нажми, чтобы помахала 🐭'});
-      }
+        bindTarget(anchor, { tip:'Лариска рядом — нажми, чтобы помахала 🐭' });
+      });
 
-      // Чебурашка — апельсиновый дождь
-      function makeChebAnchor(idx){
-        const a = document.createElement('a-entity');
-        a.setAttribute('id', `a-cheb-${idx}`);
-        a.setAttribute('mindar-image-target', `targetIndex: ${idx}`);
-        const rain = document.createElement('a-entity');
-        rain.setAttribute('id', `orange-rain-${idx}`);
-        rain.setAttribute('position', '0 1 0');
-        a.appendChild(rain);
-        anchorsRoot.appendChild(a);
-
-        let timer=null, count=0; const CAP=40;
+      // Чебурашка → апельсиновый дождь
+      const rnd=(a,b)=>a+Math.random()*(b-a);
+      $$('#cheb-3, #cheb-4').forEach(anchor=>{
+        const rain = anchor.querySelector('.orange-rain'); let timer=null, count=0; const CAP=40;
         function spawnOrange(){
           if(count>=CAP) return;
           const o=document.createElement('a-sphere');
@@ -224,24 +187,16 @@
           o.addEventListener('animationcomplete__fall', ()=>{ o.remove(); count=Math.max(0,count-1); });
           rain.appendChild(o); count++;
         }
-        bindTarget(a, {
+        bindTarget(anchor, {
           tip:'Чебурашка — ловите апельсинки! 🍊',
           onFound(){ if(!timer) timer=setInterval(spawnOrange,260); },
           onLost(){ if(timer){ clearInterval(timer); timer=null; } count=0; rain.innerHTML=''; }
         });
-      }
+      });
 
-      // Гена — «музыкальные ноты» вверх
-      function makeGenaAnchor(idx){
-        const a = document.createElement('a-entity');
-        a.setAttribute('id', `a-gena-${idx}`);
-        a.setAttribute('mindar-image-target', `targetIndex: ${idx}`);
-        const notes = document.createElement('a-entity');
-        notes.setAttribute('id', `notes-${idx}`);
-        a.appendChild(notes);
-        anchorsRoot.appendChild(a);
-
-        let timer=null, cnt=0; const CAP=32, palette=['#2ecc71','#1abc9c','#3498db','#9b59b6','#f1c40f'];
+      // Гена → «ноты» вверх
+      $$('#gena-5, #gena-6').forEach(anchor=>{
+        const notes = anchor.querySelector('.notes'); let timer=null, cnt=0; const CAP=32, palette=['#2ecc71','#1abc9c','#3498db','#9b59b6','#f1c40f'];
         function spawnNote(){
           if(cnt>=CAP) return;
           const n=document.createElement('a-sphere');
@@ -256,68 +211,41 @@
           n.addEventListener('animationcomplete__rise', ()=>{ n.remove(); cnt=Math.max(0,cnt-1); });
           notes.appendChild(n); cnt++;
         }
-        bindTarget(a, {
+        bindTarget(anchor, {
           tip:'Гена играет — летят нотки 🎶',
           onFound(){ if(!timer) timer=setInterval(spawnNote,220); },
           onLost(){ if(timer){ clearInterval(timer); timer=null; } cnt=0; notes.innerHTML=''; }
         });
-      }
+      });
 
-      // Волк — заяц подпрыгивает, мопед включается по клику
-      function makeVolkAnchor(idx){
-        const a = document.createElement('a-entity');
-        a.setAttribute('id', `a-volk-${idx}`);
-        a.setAttribute('mindar-image-target', `targetIndex: ${idx}`);
-
-        const hare = document.createElement('a-box');
-        hare.setAttribute('id', `hare-${idx}`);
-        hare.setAttribute('width','0.12'); hare.setAttribute('height','0.14'); hare.setAttribute('depth','0.08');
-        hare.setAttribute('color','#2ecc71'); hare.setAttribute('position','0.35 0.08 0.05');
-
-        const moped = document.createElement('a-torus-knot');
-        moped.setAttribute('id', `moped-${idx}`);
-        moped.setAttribute('p','2'); moped.setAttribute('q','3');
-        moped.setAttribute('radius','0.12'); moped.setAttribute('radius-tubular','0.02');
-        moped.setAttribute('color','#e67e22'); moped.setAttribute('position','-0.35 0.08 0'); moped.setAttribute('visible','false');
-
-        a.appendChild(hare); a.appendChild(moped);
-        anchorsRoot.appendChild(a);
-
+      // Волк → заяц подпрыгивает, мопед по клику
+      $$('#volk-7, #volk-8, #volk-9, #volk-10').forEach(anchor=>{
+        const hare = anchor.querySelector('.hare');
+        const moped = anchor.querySelector('.moped');
         let active=false;
-        a.addEventListener('targetFound', ()=> active=true);
-        a.addEventListener('targetLost',  ()=> { active=false; moped.setAttribute('visible', false); });
-
-        hare.addEventListener('click', ()=>{
+        anchor.addEventListener('targetFound', ()=> active=true);
+        anchor.addEventListener('targetLost',  ()=> { active=false; moped.setAttribute('visible', false); });
+        hare?.addEventListener('click', ()=>{
           hare.setAttribute('animation__hop','property: position; to: 0.35 0.16 0.05; dir: alternate; dur: 250; loop: 2; easing:easeOutQuad');
           setTimeout(()=> hare.removeAttribute('animation__hop'), 700);
         });
-
         scene.addEventListener('click', (e)=>{
           if (ui.contains(e.target)) return;
           if (!active) return;
           const vis = moped.getAttribute('visible');
           moped.setAttribute('visible', !(vis===true || vis==='true'));
         });
+        bindTarget(anchor, { tip:'Волк здесь — заяц дразнит, мопед по клику 🛵' });
+      });
 
-        bindTarget(a, { tip:'Волк здесь — заяц дразнит, мопед по клику 🛵' });
-      }
-
-      // Проброс подсказок
-      function bindTarget(el, {tip, onFound, onLost}) {
-        if (!el) return;
+      function bindTarget(el, {tip,onFound,onLost}) {
         el.addEventListener('targetFound', () => { showHint(tip); onFound && onFound(); });
         el.addEventListener('targetLost',  () => { hideHint(); onLost  && onLost();  });
       }
 
-      // Генерация всех якорей
-      expandIdx(groups.shapo).forEach(makeShapoAnchor);
-      expandIdx(groups.cheb ).forEach(makeChebAnchor);
-      expandIdx(groups.gena ).forEach(makeGenaAnchor);
-      expandIdx(groups.volk ).forEach(makeVolkAnchor);
-
       // UI
       $('#btn-help').addEventListener('click', () => {
-        alert('Наведи камеру на скульптуру:\n• Шапокляк (индексы 1–3) — Лариска машет\n• Чебурашка (4–5) — дождь апельсинов\n• Гена (6–7) — летят нотки\n• Волк (8–11) — заяц подпрыгивает, мопед включается по нажатию');
+        alert('Наведи камеру на скульптуру:\n• Шапокляк (индексы 0–2)\n• Чебурашка (3–4)\n• Гена (5–6)\n• Волк (7–10)');
       });
       $('#btn-snap').addEventListener('click', async () => {
         const c = document.querySelector('canvas'); if (!c) return alert('Камера ещё не готова');
@@ -330,7 +258,11 @@
         const a=document.createElement('a'); a.href=url; a.download='souzmult-ar.jpg'; a.click();
       });
 
-      // На всякий случай: убрать лоадеры ещё раз через 2с
+      // старт камеры
+      $('#start-back').addEventListener('click', () => { gate.remove(); startAR('environment'); });
+      $('#start-front').addEventListener('click', () => { gate.remove(); startAR('user'); });
+
+      // подчистим лоадеры ещё раз через 2с
       setTimeout(nukeOverlays, 2000);
     })();
   </script>
