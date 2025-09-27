@@ -8,22 +8,20 @@
   <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 64 64%22><text y=%2250%25%22 x=%2250%25%22 dominant-baseline=%22middle%22 text-anchor=%22middle%22 font-size=%2248%22>🎟️</text></svg>">
 
   <style>
-    html,body{margin:0;padding:0;height:100%;overflow:hidden;background:transparent; /* было #000 */}
-    a-scene, a-scene canvas { position:fixed; inset:0; }
-    a-scene canvas { z-index:1; background:transparent !important; }
+    html,body{margin:0;padding:0;height:100%;overflow:hidden;background:transparent;font-family:system-ui,-apple-system,Arial}
     .ui{position:fixed;left:0;right:0;bottom:16px;display:flex;gap:10px;justify-content:center;z-index:10}
     .ui button{padding:10px 14px;border:none;border-radius:12px;background:rgba(0,0,0,.6);color:#fff;font-weight:600;backdrop-filter:blur(6px)}
     .overlay{position:fixed;top:12px;left:50%;transform:translateX(-50%);background:rgba(0,0,0,.55);color:#fff;padding:10px 14px;border-radius:12px;z-index:10;font-weight:700}
-    .hidden{display:none}
-    .pre{position:fixed;inset:0;display:grid;place-items:center;background:#000;color:#fff;z-index:20;font-weight:800}
+    .hidden{display:none !important}
+    .pre,.preloader{position:fixed;inset:0;display:grid;place-items:center;background:#000;color:#fff;z-index:20;font-weight:800}
     .gate{position:fixed;inset:0;display:grid;place-items:center;background:rgba(0,0,0,.86);color:#fff;z-index:25;text-align:center;padding:24px}
     .gate .row{display:flex;gap:12px;justify-content:center;margin-top:10px}
     .gate button{padding:12px 16px;border:none;border-radius:12px;background:#1a1a1a;color:#fff;font-weight:800}
-
-    /* Скрываем ВСЕ стандартные UI MindAR (уголки, «Scanning…», «Loading…») */
-    .mindar-ui-overlay,
-    .mindar-ui-scanning,
-    .mindar-ui-loading { display:none !important; opacity:0 !important; visibility:hidden !important; }
+    /* слои сцены */
+    a-scene, a-scene canvas { position:fixed; inset:0; }
+    a-scene canvas { z-index:1; background:transparent !important; }
+    /* глушим MindAR UI */
+    .mindar-ui-overlay,.mindar-ui-scanning,.mindar-ui-loading{display:none !important;opacity:0 !important;visibility:hidden !important}
   </style>
 
   <!-- A-Frame 1.2.0 -->
@@ -33,6 +31,9 @@
   <script src="https://unpkg.com/mind-ar@1.1.5/dist/mindar-image-aframe.prod.js"></script>
 </head>
 <body>
+  <!-- Старые прелоадеры могут остаться — оставим оба id на всякий случай -->
+  <div id="pre" class="pre">Загружаем AR…</div>
+
   <!-- Ручной запуск -->
   <div id="gate" class="gate">
     <div>
@@ -45,7 +46,6 @@
     </div>
   </div>
 
-  <div id="pre" class="pre hidden">Загружаем AR…</div>
   <div id="hint" class="overlay hidden"></div>
 
   <div id="ui" class="ui">
@@ -54,7 +54,7 @@
     <button id="btn-ticket" onclick="location.href='ticket.html'">🎟️ Билеты</button>
   </div>
 
-  <!-- Сцена: отключены mindar UI, автостарт выкл -->
+  <!-- Сцена: автостарт выкл, MindAR UI выкл -->
   <a-scene
     renderer="alpha:true; physicallyCorrectLights:true; antialias:true"
     embedded
@@ -87,11 +87,18 @@
       const $ = s => document.querySelector(s);
       const scene = document.querySelector('a-scene');
       const getMIS = () => scene?.systems?.['mindar-image-system'];
-      const pre = $('#pre'), gate = $('#gate'), hint = $('#hint'), ui = $('#ui');
+      const gate = $('#gate'), hint = $('#hint'), ui = $('#ui');
 
       const showHint = t => { hint.textContent = t; hint.classList.remove('hidden'); };
       const hideHint = () => hint.classList.add('hidden');
       const enableSnap = () => { $('#btn-snap').disabled = false; };
+
+      function nukeOverlays(){
+        // Удаляем ВСЕ возможные лоадеры/оверлеи, даже если они из прошлых версий
+        ['pre','preloader','start-gate','gate'].forEach(id => document.getElementById(id)?.classList.add('hidden'));
+        document.querySelectorAll('.pre,.preloader,.mindar-ui-overlay,.mindar-ui-loading,.mindar-ui-scanning').forEach(el => el.remove());
+        document.body.style.background = 'transparent';
+      }
 
       async function waitMindAR(timeout = 8000) {
         const t0 = performance.now();
@@ -103,29 +110,22 @@
       }
 
       scene.addEventListener('loaded', () => console.log('[A-Frame] loaded'));
+
       scene.addEventListener('arReady', () => {
-        const mis = getMIS?.() || scene.systems['mindar-image-system'];
+        const mis = getMIS();
         const v = mis?.video || mis?._video;
         if (v) {
-          v.setAttribute('playsinline','');  // iOS
-          v.style.position = 'fixed';
-          v.style.inset = '0';
-          v.style.objectFit = 'cover';
-          v.style.zIndex = '0';              // под канвасом (который z=1), но НЕ отрицательно
-          v.style.display = 'block';
+          v.setAttribute('playsinline','');
+          Object.assign(v.style, {position:'fixed', inset:'0', objectFit:'cover', zIndex:'0', display:'block'});
           try { v.play?.(); } catch {}
         }
-        document.body.style.background = 'transparent';
-        document.querySelector('.mindar-ui-overlay')?.remove();
-        document.querySelector('.mindar-ui-loading')?.remove();
-        document.querySelector('.mindar-ui-scanning')?.remove();
-        document.getElementById('pre')?.classList.add('hidden');
-        document.getElementById('btn-snap')?.removeAttribute('disabled');
+        enableSnap();
+        nukeOverlays();
         console.log('[MindAR] arReady (video layered)');
       });
 
       scene.addEventListener('arError', (e) => {
-        pre.classList.add('hidden');
+        nukeOverlays();
         console.error('[MindAR] arError', e?.detail || e);
         showHint('Не удалось запустить камеру. Попробуйте другой режим или закройте приложения с камерой.');
         if (!document.body.contains(gate)) document.body.appendChild(gate);
@@ -133,11 +133,11 @@
 
       async function startAR(facingMode){
         hideHint();
-        pre.classList.remove('hidden');
+        $('#pre')?.classList.remove('hidden');
 
         const mis = await waitMindAR();
         if (!mis) {
-          pre.classList.add('hidden');
+          nukeOverlays();
           showHint('AR-ядро не загрузилось. Обновите страницу.');
           if (!document.body.contains(gate)) document.body.appendChild(gate);
           return;
@@ -146,12 +146,12 @@
         try { await mis.stop?.(); } catch {}
         try {
           await mis.start?.({ facingMode });
-
-          // через 2.5с проверим, что видео реально работает
+          // Проверим, что видео действительно отрисовывается
           setTimeout(() => {
             const v = mis.video || mis._video;
             const w = v?.videoWidth||0, h = v?.videoHeight||0;
             console.log('[MindAR video]', w, h, 'mode=', facingMode);
+            nukeOverlays(); // на всякий случай ещё раз
             if (w === 0 || h === 0) {
               console.warn('Video is 0x0 — retry with alternate camera');
               mis.stop?.();
@@ -161,10 +161,13 @@
           }, 2500);
         } catch (err) {
           console.error('mis.start failed', err);
-          pre.classList.add('hidden');
+          nukeOverlays();
           showHint('Старт камеры не удался. Попробуйте другой режим или перезагрузите устройство.');
           if (!document.body.contains(gate)) document.body.appendChild(gate);
         }
+
+        // дубль: даже если что-то застрянет — принудительно скрыть лоадеры через 5с
+        setTimeout(nukeOverlays, 5000);
       }
 
       $('#start-back').addEventListener('click', () => { gate.remove(); startAR('environment'); });
@@ -172,7 +175,7 @@
 
       // UI
       $('#btn-help').addEventListener('click', () => {
-        alert('Если кажется, что «вечно грузится»: это скан-рамка MindAR. Мы её отключили. Теперь просто наведи камеру на таргет 😊');
+        alert('Если кажется, что «вечно грузится»: мы отключили встроенные лоадеры. Просто наведи камеру на таргет 🙂');
       });
       $('#btn-snap').addEventListener('click', async () => {
         const c = document.querySelector('canvas'); if (!c) return alert('Камера ещё не готова');
@@ -217,8 +220,10 @@
       $('#tgt-volk').addEventListener('targetLost',  ()=> volkActive=false);
       hare?.addEventListener('click', ()=>{ hare.setAttribute('animation__hop','property: position; to: 0.35 0.16 0.05; dir: alternate; dur: 250; loop: 2; easing:easeOutQuad'); setTimeout(()=> hare.removeAttribute('animation__hop'), 700); });
       scene.addEventListener('click', (e)=>{ if (ui.contains(e.target)) return; if (!moped || !volkActive) return; const vis=moped.getAttribute('visible'); moped.setAttribute('visible', !(vis===true || vis==='true')); });
+
+      // На всякий случай: скрыть всё ещё раз через 2с после загрузки страницы
+      setTimeout(nukeOverlays, 2000);
     })();
   </script>
 </body>
 </html>
-
