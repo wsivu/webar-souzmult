@@ -1,76 +1,74 @@
 <!doctype html>
 <html lang="ru">
 <head>
-<meta charset="utf-8" />
-<meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
-<title>Союзмультпарк — AR</title>
-<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 64 64%22><text y=%2250%25%22 x=%2250%25%22 dominant-baseline=%22middle%22 text-anchor=%22middle%22 font-size=%2248%22>🎟️</text></svg>">
-<link rel="stylesheet" href="./styles.css" />
-<!-- A-Frame -->
-<script src="https://unpkg.com/aframe@1.6.0/dist/aframe.min.js"></script>
-<!-- MindAR локально (same-origin) -->
-<script src="./vendor/mindar/mindar-image-aframe.prod.js"></script>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, user-scalable=no" />
+  <title>Союзмультпарк — AR</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 64 64%22><text y=%2250%25%22 x=%2250%25%22 dominant-baseline=%22middle%22 text-anchor=%22middle%22 font-size=%2248%22>🎟️</text></svg>">
+  <link rel="stylesheet" href="./styles.css" />
+
+  <!-- A-Frame -->
+  <script src="https://unpkg.com/aframe@1.6.0/dist/aframe.min.js"></script>
+  <!-- MindAR (CDN, фиксируем версию 1.2.5) -->
+  <script src="https://unpkg.com/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
 </head>
 <body>
-<div id="preloader" class="preloader">Загружаем AR…</div>
+  <!-- Прелоадер -->
+  <div id="preloader" class="preloader">Загружаем AR…</div>
 
+  <!-- Подсказки -->
+  <div id="hint" class="overlay hidden"></div>
 
-<div id="hint" class="overlay hidden"></div>
+  <!-- UI -->
+  <div id="ui" class="ui">
+    <button id="btn-help" aria-label="Помощь">?</button>
+    <button id="btn-snap" aria-label="Снимок" disabled>📸 Снимок</button>
+    <button id="btn-selfie" aria-label="Селфи">🤳 Селфи</button>
+    <button id="btn-ticket" aria-label="Билеты" onclick="location.href='ticket.html'">🎟️ Билеты</button>
+  </div>
 
+  <!-- Оверлеи -->
+  <div id="rotate" class="rotate hidden">Поверните телефон в вертикальный режим</div>
+  <div id="ios-gate" class="gate hidden">
+    <p>Нажмите, чтобы включить камеру</p>
+    <button id="ios-allow">Включить</button>
+  </div>
 
-<div id="ui" class="ui">
-<button id="btn-help" aria-label="Помощь">?</button>
-<button id="btn-snap" aria-label="Снимок" disabled>📸 Снимок</button>
-<button id="btn-selfie" aria-label="Селфи">🤳 Селфи</button>
-<button id="btn-ticket" aria-label="Билеты" onclick="location.href='ticket.html'">🎟️ Билеты</button>
-</div>
+  <!-- ВАЖНО: один targets.mind с тремя целями -->
+  <a-scene
+    renderer="alpha:true; colorManagement:true; physicallyCorrectLights:true; antialias:true"
+    embedded
+    vr-mode-ui="enabled:false"
+    device-orientation-permission-ui="enabled:true"
+    mindar-image="imageTargetSrc: ./targets/targets.mind; filterMinCF:0.0002; filterBeta:0.001; warmupTolerance:5"
+    loading-screen="enabled:false"
+  >
+    <!-- Свет -->
+    <a-entity light="type: ambient; intensity: 0.9"></a-entity>
+    <a-entity light="type: directional; intensity: 0.8" position="0 1 0"></a-entity>
 
+    <!-- Чебурашка -->
+    <a-entity id="tgt-cheb" mindar-image-target="targetIndex: 0">
+      <a-entity id="orange-rain" position="0 1 0"></a-entity>
+    </a-entity>
 
-<div id="rotate" class="rotate hidden">Поверните телефон в вертикальный режим</div>
-<div id="ios-gate" class="gate hidden">
-<p>Нажмите, чтобы включить камеру</p>
-<button id="ios-allow">Включить</button>
-</div>
+    <!-- Шапокляк / Гена -->
+    <a-entity id="tgt-shapo" mindar-image-target="targetIndex: 1">
+      <a-cone id="lariska-model" radius-bottom="0.12" height="0.25" color="#9c88ff" position="0.1 0.25 0.05"></a-cone>
+    </a-entity>
 
+    <!-- Волк -->
+    <a-entity id="tgt-volk" mindar-image-target="targetIndex: 2">
+      <a-box id="hare-model" depth="0.08" height="0.14" width="0.12" color="#2ecc71" position="0.35 0.08 0.05"></a-box>
+      <a-torus-knot id="moped-model" p="2" q="3" radius="0.12" radius-tubular="0.02" color="#e67e22" position="-0.35 0.08 0" visible="false"></a-torus-knot>
+    </a-entity>
 
-<!-- ВАЖНО: один targets.mind с тремя целями -->
-<a-scene
-renderer="alpha:true; colorManagement:true; physicallyCorrectLights:true; antialias:true"
-embedded
-vr-mode-ui="enabled:false"
-device-orientation-permission-ui="enabled:true"
-mindar-image="imageTargetSrc: ./targets/targets.mind; filterMinCF:0.0002; filterBeta:0.001; warmupTolerance:5"
-loading-screen="enabled:false"
->
-<a-entity light="type: ambient; intensity: 0.9"></a-entity>
-<a-entity light="type: directional; intensity: 0.8" position="0 1 0"></a-entity>
+    <a-camera position="0 0 0"></a-camera>
+  </a-scene>
 
-
-<!-- Чебурашка -->
-<a-entity id="tgt-cheb" mindar-image-target="targetIndex: 0">
-<a-entity id="orange-rain" position="0 1 0"></a-entity>
-</a-entity>
-
-
-<!-- Шапокляк/Гена -->
-<a-entity id="tgt-shapo" mindar-image-target="targetIndex: 1">
-<a-cone id="lariska-model" radius-bottom="0.12" height="0.25" color="#9c88ff" position="0.1 0.25 0.05"></a-cone>
-</a-entity>
-
-
-<!-- Волк -->
-<a-entity id="tgt-volk" mindar-image-target="targetIndex: 2">
-<a-box id="hare-model" depth="0.08" height="0.14" width="0.12" color="#2ecc71" position="0.35 0.08 0.05"></a-box>
-<a-torus-knot id="moped-model" p="2" q="3" radius="0.12" radius-tubular="0.02" color="#e67e22" position="-0.35 0.08 0" visible="false"></a-torus-knot>
-</a-entity>
-
-
-<a-camera position="0 0 0"></a-camera>
-</a-scene>
-
-
-<script src="./js/app.js"></script>
-<script src="./js/capture.js"></script>
-<script src="./js/ui.js"></script>
+  <!-- Скрипты проекта -->
+  <script src="./js/app.js"></script>
+  <script src="./js/capture.js"></script>
+  <script src="./js/ui.js"></script>
 </body>
 </html>
