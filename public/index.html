@@ -303,10 +303,9 @@
         console.log('Canvas size:', canvas.width, 'x', canvas.height);
         console.log('Video ready:', video ? video.videoWidth + 'x' + video.videoHeight : 'no video');
         try {
-        // Простая версия без share API
           const url = canvas.toDataURL('image/jpeg', 0.8);
           console.log('DataURL created, length:', url.length);
-          сonst a = document.createElement('a');
+          const a = document.createElement('a');
           a.href = url;
           a.download = 'souzmult-ar-' + Date.now() + '.jpg';
           document.body.appendChild(a);
@@ -328,5 +327,6 @@
   </script>
 </body>
 </html>
+
 
 
