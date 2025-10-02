@@ -163,6 +163,21 @@
         enableSnap(); nukeOverlays();
         console.log('[MindAR] arReady (video layered)');
       });
+      document.querySelectorAll('[mindar-image-target]').forEach(target => {
+        target.addEventListener('targetFound', () => {
+          console.log('🎯 TARGET FOUND:', target.id);
+          showHint('Цель найдена: ' + target.id);
+      });
+      target.addEventListener('targetLost', () => {
+        console.log('❌ TARGET LOST:', target.id);
+        });
+      });
+      setTimeout(() => {
+        const mis = getMIS();
+        console.log('MindAR System:', mis);
+        console.log('Targets count:', document.querySelectorAll('[mindar-image-target]').length);
+      }, 2000);
+      
       scene.addEventListener('arError', (e) => {
         nukeOverlays();
         console.error('[MindAR] arError', e?.detail || e);
@@ -278,22 +293,40 @@
         anchor.addEventListener('targetFound', ()=>{ showHint(tip); onFound && onFound(); console.log('[targetFound]', anchor.id); });
         anchor.addEventListener('targetLost',  ()=>{ hideHint(); onLost  && onLost();  console.log('[targetLost]',  anchor.id); });
       }
+      $('#btn-snap').addEventListener('click', function() {
+        console.log('📸 Snap button clicked');
+        const canvas = document.querySelector('canvas');
+        const video = document.querySelector('video');
+        if (!canvas) {
+          alert('Canvas не найден');
+          return;
+        }
+        console.log('Canvas size:', canvas.width, 'x', canvas.height);
+        console.log('Video ready:', video ? video.videoWidth + 'x' + video.videoHeight : 'no video');
+        try {
+        // Простая версия без share API
+          const url = canvas.toDataURL('image/jpeg', 0.8);
+          console.log('DataURL created, length:', url.length);
+          сonst a = document.createElement('a');
+          a.href = url;
+          a.download = 'souzmult-ar-' + Date.now() + '.jpg';
+          document.body.appendChild(a);
+          a.click();
+          document.body.removeChild(a);
+          showHint('📸 Снимок сохранен!');
+        } catch (error) {
+          console.error('Screenshot error:', error);
+          alert('Ошибка: ' + error.message);
+        }
+      });
 
       // UI
       $('#btn-help').addEventListener('click', () => {
         alert('Советы для телефона:\n• Наведите камеру на скульптуру полностью (не слишком близко)\n• При плохом свете трекинг «мигает» — подойдите ближе/ярче\n• Если всё равно пусто: перезапустите вкладку и попробуйте фронтальную/заднюю камеру');
       });
-      $('#btn-snap').addEventListener('click', async () => {
-        const c = document.querySelector('canvas'); if (!c) return alert('Камера ещё не готова');
-        const url = c.toDataURL('image/jpeg', 0.95);
-        try {
-          const blob = await (await fetch(url)).blob();
-          const file = new File([blob], 'souzmult-ar.jpg', {type:'image/jpeg'});
-          if (navigator.canShare?.({files:[file]})) { await navigator.share({files:[file], title:'AR фото'}); return; }
-        } catch {}
-        const a=document.createElement('a'); a.href=url; a.download='souzmult-ar.jpg'; a.click();
-      });
+      
     })();
   </script>
 </body>
 </html>
+
